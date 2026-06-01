@@ -4,6 +4,24 @@
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
+    <string name="login_fragment_label">Login</string>
+    <string name="login_title">Smart Calendar</string>
+    <string name="login_subtitle">Login to manage your events and tags.</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
+    <string name="login_button">Login</string>
+    <string name="login_loading">Logging in...</string>
+    <string name="login_dev_skip">Continue in dev mode</string>
+    <string name="login_missing_fields">Username and password are required.</string>
+    <string name="login_api_not_connected">Login API is not connected yet.</string>
+    <string name="events_title">Events</string>
+    <string name="events_refresh">Refresh</string>
+    <string name="events_loading">Loading events...</string>
+    <string name="events_empty">No events found.</string>
+    <string name="events_column_title">Event</string>
+    <string name="events_column_time">Time</string>
+    <string name="events_column_tag">Tag</string>
+    <string name="events_column_owner">User</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
@@ -43,4 +61,8 @@
         libero vel nunc consequat, quis tincidunt nisl eleifend. Cras bibendum enim a justo luctus
         vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
     </string>
+    <plurals name="events_loaded_count">
+        <item quantity="one">%d event loaded.</item>
+        <item quantity="other">%d events loaded.</item>
+    </plurals>
 </resources>

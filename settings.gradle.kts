@@ -24,5 +24,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "TieuLuanAndroids"
 include(":app")
-include(":backend")
-project(":backend").projectDir = file("backend/SmartCalendarAPI")
+
+val backendDir = file("backend/SmartCalendarAPI")
+if (backendDir.exists()) {
+    include(":backend")
+    project(":backend").projectDir = backendDir
+}
