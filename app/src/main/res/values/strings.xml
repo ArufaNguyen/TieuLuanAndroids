@@ -4,6 +4,7 @@
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
+    <string name="view_fragment_label">View</string>
     <string name="login_fragment_label">Login</string>
     <string name="login_title">Smart Calendar</string>
     <string name="login_subtitle">Login to manage your events and tags.</string>

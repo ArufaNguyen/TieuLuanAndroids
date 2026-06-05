@@ -3,7 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/LoginFragment">
+    app:startDestination="@id/MenuFragment">
+    <fragment
+        android:id="@+id/MenuFragment"
+        android:name="com.example.tieuluanandroids.ViewFragment"
+        android:label="@string/view_fragment_label"
+        tools:layout="@layout/man_hinh_chinh">
+        <action
+            android:id="@+id/action_MenuFragment_to_LoginFragment"
+            app:destination="@id/LoginFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/LoginFragment"
