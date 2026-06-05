@@ -83,9 +83,7 @@ val startTunnelPublisher by tasks.registering {
         val gradlew = file("gradlew.bat").absolutePath
         val process = ProcessBuilder(
             gradlew,
-            "-p",
-            "tunnel-url-publisher",
-            "run"
+            ":tunnel-url-publisher:run"
         )
             .directory(rootDir)
             .redirectErrorStream(true)
