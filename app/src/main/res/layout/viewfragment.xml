@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<HorizontalScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
+
+    <ScrollView
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent">
+
+        <TableLayout
+            android:id="@+id/tableLich"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:stretchColumns="1,2,3,4,5,6,7">
+
+            <!-- HÀNG 1: TIÊU ĐỀ NGÀY -->
+            <TableRow>
+                <TextView
+                    android:layout_width="70dp"
+                    android:layout_height="50dp"
+                    android:text=""
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/mon"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Mon"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/tue"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Tue"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/wed"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Wed"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/thu"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Thu"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/fri"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Fri"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/sat"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Sat"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+
+                <TextView
+                    android:id="@+id/sun"
+                    android:layout_width="100dp"
+                    android:layout_height="50dp"
+                    android:text="Sun"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#F0F0F0" />
+            </TableRow>
+
+            <!-- HÀNG 2: 1 AM -->
+            <TableRow>
+                <TextView
+                    android:layout_width="70dp"
+                    android:layout_height="60dp"
+                    android:text="1 AM"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#FAFAFA" />
+
+                <View android:id="@+id/mon_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:id="@+id/tue_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:id="@+id/wed_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:id="@+id/thu_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:id="@+id/fri_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:id="@+id/sat_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:id="@+id/sun_1am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+            </TableRow>
+
+            <!-- HÀNG 3: 2 AM -->
+            <TableRow>
+                <TextView
+                    android:layout_width="70dp"
+                    android:layout_height="60dp"
+                    android:text="2 AM"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:background="#FAFAFA" />
+
+                <View android:id="@+id/mon_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:id="@+id/tue_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:id="@+id/wed_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:id="@+id/thu_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:id="@+id/fri_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:id="@+id/sat_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:id="@+id/sun_2am" android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+            </TableRow>
+
+            <!-- HÀNG 4: 3 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="3 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+            </TableRow>
+
+            <!-- HÀNG 5: 4 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="4 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+            </TableRow>
+
+            <!-- HÀNG 6: 5 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="5 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+            </TableRow>
+
+            <!-- HÀNG 7: 6 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="6 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+            </TableRow>
+
+            <!-- HÀNG 8: 7 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="7 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+            </TableRow>
+
+            <!-- HÀNG 9: 8 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="8 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+            </TableRow>
+
+            <!-- HÀNG 10: 9 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="9 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+            </TableRow>
+
+            <!-- HÀNG 11: 10 AM -->
+            <TableRow>
+                <TextView android:layout_width="70dp" android:layout_height="60dp" android:text="10 AM" android:gravity="center" android:textStyle="bold" android:background="#FAFAFA" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#FFFFFF" />
+                <View android:layout_width="100dp" android:layout_height="60dp" android:background="#E8E8E8" />
+            </TableRow>
+
+        </TableLayout>
+    </ScrollView>
+</HorizontalScrollView>
