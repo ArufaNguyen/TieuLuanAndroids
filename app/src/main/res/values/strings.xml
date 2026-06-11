@@ -25,7 +25,6 @@
     <string name="events_column_owner">User</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
-    <String name="con_cho">dog</String>
 
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
