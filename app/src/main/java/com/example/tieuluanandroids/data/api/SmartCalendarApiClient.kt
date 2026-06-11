@@ -28,6 +28,9 @@ object SmartCalendarApiClient {
     private var cachedBaseUrl: String? = null
 
     @Volatile
+    private var sessionToken: String? = null
+
+    @Volatile
     var devMode: Boolean = false
         private set
 
@@ -35,14 +38,12 @@ object SmartCalendarApiClient {
         return try {
             val baseUrl = fetchBaseUrl()
             val payload = JSONObject()
-                .put("userId", JSONObject.NULL)
-                .put("username", username)
-                .put("email", JSONObject.NULL)
+                .put("loginName", username)
                 .put("password", password)
                 .toString()
 
             val request = Request.Builder()
-                .url("$baseUrl/api/session/login")
+                .url("$baseUrl/api/v1/auth/login")
                 .post(payload.toRequestBody(jsonMediaType))
                 .build()
 
@@ -57,6 +58,7 @@ object SmartCalendarApiClient {
                 val message = json.optString("message", "unknown response")
 
                 if (code == 200) {
+                    sessionToken = json.optJSONObject("body")?.optString("sessionToken")
                     devMode = false
                     ApiResult(true, "Login success")
                 } else {
@@ -75,8 +77,11 @@ object SmartCalendarApiClient {
     fun checkBackendDevMode(): ApiResult {
         return try {
             val baseUrl = fetchBaseUrl()
+            val token = sessionToken
+                ?: return ApiResult(false, "No session token. Login before checking the current user.")
             val request = Request.Builder()
-                .url("$baseUrl/api/session/dev-mode")
+                .url("$baseUrl/api/v1/auth/me")
+                .header("X-Session-Token", token)
                 .get()
                 .build()
 
@@ -87,11 +92,10 @@ object SmartCalendarApiClient {
                 }
 
                 val json = JSONObject(responseBody)
-                val enabled = json.optJSONObject("body")?.optBoolean("enabled") ?: false
-                if (enabled) {
-                    ApiResult(true, "Backend dev mode enabled")
+                if (json.optInt("code", response.code) == 200) {
+                    ApiResult(true, "Session is valid")
                 } else {
-                    ApiResult(false, "Backend DEV_MODE=false. Set DEV_MODE=true in backend/SmartCalendarAPI/.env and restart backend.")
+                    ApiResult(false, json.optString("message", "Invalid session"))
                 }
             }
         } catch (error: Exception) {
@@ -103,7 +107,7 @@ object SmartCalendarApiClient {
         return try {
             val baseUrl = fetchBaseUrl()
             val request = Request.Builder()
-                .url("$baseUrl/api/events")
+                .url("$baseUrl/api/v1/events")
                 .get()
                 .build()
 

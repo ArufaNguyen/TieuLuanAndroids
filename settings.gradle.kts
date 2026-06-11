@@ -36,3 +36,9 @@ if (tunnelPublisherDir.exists()) {
     include(":tunnel-url-publisher")
     project(":tunnel-url-publisher").projectDir = tunnelPublisherDir
 }
+
+val tunnelPublisherTestDir = file("tunnel-url-publisher-test")
+if (tunnelPublisherTestDir.exists()) {
+    include(":tunnel-url-publisher-test")
+    project(":tunnel-url-publisher-test").projectDir = tunnelPublisherTestDir
+}
