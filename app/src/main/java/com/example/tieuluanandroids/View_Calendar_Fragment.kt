@@ -7,27 +7,63 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 
 
-class ViewFragment : Fragment() {
+class View_Calendar_Fragment : Fragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         // Nạp file XML man_hinh_chinh.xml (giao diện lịch của bạn) lên
-        return inflater.inflate(R.layout.man_hinh_chinh, container, false)
+        return inflater.inflate(R.layout.fragment_calendar_view, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Sau khi giao diện được tạo, gọi hàm duyệt qua từng cột ngày
+
+        // Tự động quét 24 tiếng x 7 ngày để gắn sự kiện mở Popup
         duyetQuaCacCotNgay(view)
+
+        // Tính năng kéo trượt đồng bộ Thứ và Ô của Thắng
+        val scrollHeader = view.findViewById<HorizontalScrollView>(R.id.scroll_header)
+        val scrollBody = view.findViewById<HorizontalScrollView>(R.id.scroll_body)
+        scrollBody.setOnScrollChangeListener { _, scrollX, _, _, _ ->
+            scrollHeader.scrollTo(scrollX, 0)
+        }
+
+        // 🔥 THÊM ĐOẠN NÀY: Bộ bắt sóng tự động vẽ chữ lên ô lịch
+        parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
+            val thu = bundle.getString("TRA_VE_THU") ?: ""         // Ví dụ: "Monday"
+            val gio = bundle.getString("TRA_VE_GIO") ?: ""         // Ví dụ: "1 AM" hoặc "12 PM"
+            val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: "" //
+
+            // Chuẩn hóa chuỗi chữ để ráp thành ID tương thích XML (Ví dụ: "Monday" -> "monday", "1 AM" -> "1AM")
+            val thuClean = thu.lowercase()
+            val gioClean = gio.replace(" ", "") // Xóa khoảng trắng để tạo chữ "1AM", "12PM"
+
+            // Tự động ghép chuỗi thành ID, ví dụ: "col_monday_1AM"
+            val idString = "col_${thuClean}_$gioClean"
+
+            // Biến chuỗi chữ thành ID hệ thống thật sự R.id
+            val cellId = resources.getIdentifier(idString, "id", requireContext().packageName)
+
+            // Nếu dò trúng ô FrameLayout đó trên giao diện, nạp chữ màu xanh lá vào luôn!
+            if (cellId != 0) {
+                val cell = view.findViewById<FrameLayout>(cellId)
+                if (cell != null) {
+                    // Gọi hàm vẽ cục màu xanh lá cây hiển thị nội dung của bạn
+                    addEventToCell(cell, noiDung, thu, gio)
+                }
+            }
+        }
     }
+
 
     /**
      * Hàm duyệt qua từng cột ngày (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
@@ -76,7 +112,17 @@ class ViewFragment : Fragment() {
 
                             // Gắn sự kiện click cho từng ô
                             cell.setOnClickListener {
-                                Toast.makeText(context, "$dayName - $timeSlot", Toast.LENGTH_SHORT).show()
+                                // 1. Bọc hành lý gồm Ngày và Giờ của ô vừa bấm
+                                val bundle = Bundle()
+                                bundle.putString("KEY_THU", dayName) // Hợp lệ vì nằm trong vòng lặp chứa dayName!
+                                bundle.putString("KEY_GIO", timeSlot) // Hợp lệ vì nằm trong vòng lặp chứa timeSlot!
+
+                                // 2. Tạo Popup và buộc hành lý vào
+                                val popup = PopupFragment()
+                                popup.arguments = bundle //
+
+                                // 3. Bật Popup bung từ dưới màn hình lên
+                                popup.show(parentFragmentManager, popup.tag)
                             }
                         }
                     }
@@ -115,9 +161,6 @@ class ViewFragment : Fragment() {
         cell.addView(eventView)
 
         // Gắn sự kiện click cho ô
-        cell.setOnClickListener {
-            Toast.makeText(cell.context, "$day - $time: $eventName", Toast.LENGTH_SHORT).show()
-        }
     }
 
     /**
@@ -158,4 +201,6 @@ class ViewFragment : Fragment() {
         }
         return timeSlots
     }
+
+
 }

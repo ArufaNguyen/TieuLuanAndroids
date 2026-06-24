@@ -6,9 +6,9 @@
     app:startDestination="@id/MenuFragment">
     <fragment
         android:id="@+id/MenuFragment"
-        android:name="com.example.tieuluanandroids.ViewFragment"
+        android:name="com.example.tieuluanandroids.View_Calendar_Fragment"
         android:label="@string/view_fragment_label"
-        tools:layout="@layout/man_hinh_chinh">
+        tools:layout="@layout/fragment_calendar_view">
         <action
             android:id="@+id/action_MenuFragment_to_LoginFragment"
             app:destination="@id/LoginFragment" />
