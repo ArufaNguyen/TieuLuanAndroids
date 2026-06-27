@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/MenuFragment"
         android:name="com.example.tieuluanandroids.View_Calendar_Fragment"
-        android:label="@string/view_fragment_label"
+        android:label="@string/menu_fragment_label"
         tools:layout="@layout/fragment_calendar_view">
 
         <action
