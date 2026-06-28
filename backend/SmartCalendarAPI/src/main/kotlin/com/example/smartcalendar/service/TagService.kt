@@ -6,6 +6,7 @@ import com.example.smartcalendar.dto.tag.request.UpdateTagRequest
 import com.example.smartcalendar.dto.tag.response.TagResponse
 import com.example.smartcalendar.dto.tag.response.TagResponseDetail
 import com.example.smartcalendar.dto.user.response.UserResponse
+import com.example.smartcalendar.exception.ApiException
 import com.example.smartcalendar.model.Tag
 import com.example.smartcalendar.repository.TagRepository
 import com.example.smartcalendar.repository.UserRepository
@@ -23,24 +24,24 @@ class TagService(
         return ApiResponse.success(tags.map(::toResponse))
     }
 
-    fun getTagById(id: Int): ApiResponse<TagResponseDetail> {
+    fun getTagById(id: Int, activeUserId: Int): ApiResponse<TagResponseDetail> {
         val tag = tagRepository.findById(id).orElse(null) ?: return ApiResponse.notFound("tag not found")
+        requireOwner(tag, activeUserId)
         return ApiResponse.success(toDetail(tag))
     }
 
-    fun createTag(request: CreateTagRequest): ApiResponse<TagResponseDetail> {
-        val user = request.userId?.let {
-            userRepository.findById(it).orElse(null) ?: return ApiResponse.notFound("user not found")
-        }
+    fun createTag(request: CreateTagRequest, activeUserId: Int): ApiResponse<TagResponseDetail> {
+        val user = userRepository.findById(activeUserId).orElse(null)
+            ?: return ApiResponse.notFound("user not found")
         val tag = tagRepository.save(Tag(name = request.name, color = request.color, user = user))
         return ApiResponse.created(toDetail(tag))
     }
 
-    fun updateTag(id: Int, request: UpdateTagRequest): ApiResponse<TagResponseDetail> {
+    fun updateTag(id: Int, request: UpdateTagRequest, activeUserId: Int): ApiResponse<TagResponseDetail> {
         val tag = tagRepository.findById(id).orElse(null) ?: return ApiResponse.notFound("tag not found")
-        val user = request.userId?.let {
-            userRepository.findById(it).orElse(null) ?: return ApiResponse.notFound("user not found")
-        }
+        requireOwner(tag, activeUserId)
+        val user = userRepository.findById(activeUserId).orElse(null)
+            ?: return ApiResponse.notFound("user not found")
 
         tag.name = request.name
         tag.color = request.color
@@ -48,13 +49,20 @@ class TagService(
         return ApiResponse.success(toDetail(tagRepository.save(tag)))
     }
 
-    fun deleteTag(id: Int): ApiResponse<String> {
-        if (!tagRepository.existsById(id)) return ApiResponse.notFound("tag not found")
+    fun deleteTag(id: Int, activeUserId: Int): ApiResponse<String> {
+        val tag = tagRepository.findById(id).orElse(null) ?: return ApiResponse.notFound("tag not found")
+        requireOwner(tag, activeUserId)
         return try {
-            tagRepository.deleteById(id)
+            tagRepository.delete(tag)
             ApiResponse.success("tag deleted successfully")
         } catch (_: DataIntegrityViolationException) {
             ApiResponse.conflict("tag cannot be deleted because it is used by events")
+        }
+    }
+
+    private fun requireOwner(tag: Tag, activeUserId: Int) {
+        if (tag.user?.id != activeUserId) {
+            throw ApiException(403, "tag does not belong to the active session")
         }
     }
 

@@ -7,6 +7,7 @@ import com.example.smartcalendar.dto.event.response.EventResponse
 import com.example.smartcalendar.dto.event.response.EventResponseDetail
 import com.example.smartcalendar.dto.tag.response.TagResponse
 import com.example.smartcalendar.dto.user.response.UserResponse
+import com.example.smartcalendar.exception.ApiException
 import com.example.smartcalendar.model.Event
 import com.example.smartcalendar.repository.EventRepository
 import com.example.smartcalendar.repository.TagRepository
@@ -32,12 +33,13 @@ class EventService(
         return ApiResponse.success(events.map(::toResponse))
     }
 
-    fun getEventById(id: Int): ApiResponse<EventResponseDetail> {
+    fun getEventById(id: Int, activeUserId: Int): ApiResponse<EventResponseDetail> {
         val event = eventRepository.findById(id).orElse(null) ?: return ApiResponse.notFound("event not found")
+        requireOwner(event, activeUserId)
         return ApiResponse.success(toDetail(event))
     }
 
-    fun createEvent(request: CreateEventRequest): ApiResponse<EventResponseDetail> {
+    fun createEvent(request: CreateEventRequest, activeUserId: Int): ApiResponse<EventResponseDetail> {
         val startTime = request.startTime ?: return ApiResponse.badRequest("startTime is required")
         val endTime = request.endTime ?: return ApiResponse.badRequest("endTime is required")
         if (!endTime.isAfter(startTime)) return ApiResponse.badRequest("endTime must be after startTime")
@@ -45,11 +47,10 @@ class EventService(
         val tag = request.tagId?.let {
             tagRepository.findById(it).orElse(null) ?: return ApiResponse.notFound("tag not found")
         }
-        val user = request.userId?.let {
-            userRepository.findById(it).orElse(null) ?: return ApiResponse.notFound("user not found")
-        }
-        if (tag?.user != null && user != null && tag.user?.id != user.id) {
-            return ApiResponse.badRequest("tag does not belong to user")
+        val user = userRepository.findById(activeUserId).orElse(null)
+            ?: return ApiResponse.notFound("user not found")
+        if (tag != null && tag.user?.id != activeUserId) {
+            throw ApiException(403, "tag does not belong to the active session")
         }
 
         val event = eventRepository.save(
@@ -65,18 +66,18 @@ class EventService(
         return ApiResponse.created(toDetail(event))
     }
 
-    fun updateEvent(id: Int, request: UpdateEventRequest): ApiResponse<EventResponseDetail> {
+    fun updateEvent(id: Int, request: UpdateEventRequest, activeUserId: Int): ApiResponse<EventResponseDetail> {
         val event = eventRepository.findById(id).orElse(null) ?: return ApiResponse.notFound("event not found")
+        requireOwner(event, activeUserId)
         if (!request.endTime.isAfter(request.startTime)) return ApiResponse.badRequest("endTime must be after startTime")
 
         val tag = request.tagId?.let {
             tagRepository.findById(it).orElse(null) ?: return ApiResponse.notFound("tag not found")
         }
-        val user = request.userId?.let {
-            userRepository.findById(it).orElse(null) ?: return ApiResponse.notFound("user not found")
-        }
-        if (tag?.user != null && user != null && tag.user?.id != user.id) {
-            return ApiResponse.badRequest("tag does not belong to user")
+        val user = userRepository.findById(activeUserId).orElse(null)
+            ?: return ApiResponse.notFound("user not found")
+        if (tag != null && tag.user?.id != activeUserId) {
+            throw ApiException(403, "tag does not belong to the active session")
         }
 
         event.title = request.title
@@ -88,10 +89,17 @@ class EventService(
         return ApiResponse.success(toDetail(eventRepository.save(event)))
     }
 
-    fun deleteEvent(id: Int): ApiResponse<String> {
-        if (!eventRepository.existsById(id)) return ApiResponse.notFound("event not found")
-        eventRepository.deleteById(id)
+    fun deleteEvent(id: Int, activeUserId: Int): ApiResponse<String> {
+        val event = eventRepository.findById(id).orElse(null) ?: return ApiResponse.notFound("event not found")
+        requireOwner(event, activeUserId)
+        eventRepository.delete(event)
         return ApiResponse.success("event deleted successfully")
+    }
+
+    private fun requireOwner(event: Event, activeUserId: Int) {
+        if (event.user?.id != activeUserId) {
+            throw ApiException(403, "event does not belong to the active session")
+        }
     }
 
     private fun toResponse(event: Event) = EventResponse(

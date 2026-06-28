@@ -22,7 +22,13 @@ for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
 
 if "%HYPERVISOR%"=="" set "HYPERVISOR=docker"
 if "%DB_HOST%"=="" set "DB_HOST=localhost"
-if "%DB_PORT%"=="" set "DB_PORT=6969"
+if "%DB_PORT%"=="" (
+    if /I "%HYPERVISOR%"=="direct" (
+        set "DB_PORT=1433"
+    ) else (
+        set "DB_PORT=6969"
+    )
+)
 if "%DB_NAME%"=="" set "DB_NAME=SmartCalendarDB"
 if "%DB_USERNAME%"=="" set "DB_USERNAME=sa"
 
@@ -42,6 +48,13 @@ echo.
 echo [INFO] Generating SQL script...
 
 > "%SQL_FILE%" echo SET NOCOUNT ON;
+>> "%SQL_FILE%" echo SET ANSI_NULLS ON;
+>> "%SQL_FILE%" echo SET QUOTED_IDENTIFIER ON;
+>> "%SQL_FILE%" echo SET ANSI_PADDING ON;
+>> "%SQL_FILE%" echo SET ANSI_WARNINGS ON;
+>> "%SQL_FILE%" echo SET CONCAT_NULL_YIELDS_NULL ON;
+>> "%SQL_FILE%" echo SET ARITHABORT ON;
+>> "%SQL_FILE%" echo SET NUMERIC_ROUNDABORT OFF;
 >> "%SQL_FILE%" echo.
 >> "%SQL_FILE%" echo EXEC sp_configure 'show advanced options', 1;
 >> "%SQL_FILE%" echo RECONFIGURE;
@@ -82,7 +95,7 @@ echo [INFO] Generating SQL script...
 >> "%SQL_FILE%" echo         user_id INT NOT NULL UNIQUE,
 >> "%SQL_FILE%" echo         username NVARCHAR(100) NOT NULL UNIQUE,
 >> "%SQL_FILE%" echo         login_name NVARCHAR(100) NOT NULL UNIQUE,
->> "%SQL_FILE%" echo         password_hash NVARCHAR(255) NOT NULL,
+>> "%SQL_FILE%" echo         password VARCHAR(255) NOT NULL,
 >> "%SQL_FILE%" echo         created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
 >> "%SQL_FILE%" echo     );
 >> "%SQL_FILE%" echo     PRINT 'Table created: accounts';
@@ -130,11 +143,73 @@ echo [INFO] Generating SQL script...
 >> "%SQL_FILE%" echo END
 >> "%SQL_FILE%" echo GO
 >> "%SQL_FILE%" echo.
+>> "%SQL_FILE%" echo IF OBJECT_ID(N'dbo.discovery_jobs', N'U') IS NULL
+>> "%SQL_FILE%" echo BEGIN
+>> "%SQL_FILE%" echo     CREATE TABLE dbo.discovery_jobs (
+>> "%SQL_FILE%" echo         id NVARCHAR(36) PRIMARY KEY,
+>> "%SQL_FILE%" echo         user_id INT NULL,
+>> "%SQL_FILE%" echo         status NVARCHAR(30) NOT NULL,
+>> "%SQL_FILE%" echo         file_name NVARCHAR(255) NULL,
+>> "%SQL_FILE%" echo         result_json NVARCHAR(MAX) NULL,
+>> "%SQL_FILE%" echo         error_message NVARCHAR(MAX) NULL,
+>> "%SQL_FILE%" echo         created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+>> "%SQL_FILE%" echo         completed_at DATETIME2 NULL
+>> "%SQL_FILE%" echo     );
+>> "%SQL_FILE%" echo     PRINT 'Table created: discovery_jobs';
+>> "%SQL_FILE%" echo END
+>> "%SQL_FILE%" echo GO
+>> "%SQL_FILE%" echo.
+>> "%SQL_FILE%" echo IF OBJECT_ID(N'dbo.api_knowledge', N'U') IS NULL
+>> "%SQL_FILE%" echo BEGIN
+>> "%SQL_FILE%" echo     CREATE TABLE dbo.api_knowledge (
+>> "%SQL_FILE%" echo         id INT IDENTITY(1,1) PRIMARY KEY,
+>> "%SQL_FILE%" echo         user_id INT NULL,
+>> "%SQL_FILE%" echo         discovery_job_id NVARCHAR(36) NULL,
+>> "%SQL_FILE%" echo         natural_key NVARCHAR(64) NOT NULL,
+>> "%SQL_FILE%" echo         tool_name NVARCHAR(255) NOT NULL,
+>> "%SQL_FILE%" echo         portal_url NVARCHAR(1000) NOT NULL,
+>> "%SQL_FILE%" echo         method NVARCHAR(20) NOT NULL,
+>> "%SQL_FILE%" echo         category NVARCHAR(100) NOT NULL,
+>> "%SQL_FILE%" echo         knowledge_json NVARCHAR(MAX) NOT NULL,
+>> "%SQL_FILE%" echo         created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+>> "%SQL_FILE%" echo         updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+>> "%SQL_FILE%" echo     );
+>> "%SQL_FILE%" echo     PRINT 'Table created: api_knowledge';
+>> "%SQL_FILE%" echo END
+>> "%SQL_FILE%" echo GO
+>> "%SQL_FILE%" echo.
+>> "%SQL_FILE%" echo IF OBJECT_ID(N'dbo.portal_credentials', N'U') IS NULL
+>> "%SQL_FILE%" echo BEGIN
+>> "%SQL_FILE%" echo     CREATE TABLE dbo.portal_credentials (
+>> "%SQL_FILE%" echo         id INT IDENTITY(1,1) PRIMARY KEY,
+>> "%SQL_FILE%" echo         capture_id NVARCHAR(36) NOT NULL UNIQUE,
+>> "%SQL_FILE%" echo         user_id INT NULL,
+>> "%SQL_FILE%" echo         login_tool_id INT NULL,
+>> "%SQL_FILE%" echo         portal_url NVARCHAR(1000) NULL,
+>> "%SQL_FILE%" echo         login_url_template NVARCHAR(2000) NULL,
+>> "%SQL_FILE%" echo         authorization_header NVARCHAR(MAX) NULL,
+>> "%SQL_FILE%" echo         cookie NVARCHAR(MAX) NULL,
+>> "%SQL_FILE%" echo         csrf_token NVARCHAR(MAX) NULL,
+>> "%SQL_FILE%" echo         expires_at DATETIMEOFFSET NULL,
+>> "%SQL_FILE%" echo         last_captured_at DATETIMEOFFSET NULL,
+>> "%SQL_FILE%" echo         created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+>> "%SQL_FILE%" echo     );
+>> "%SQL_FILE%" echo     PRINT 'Table created: portal_credentials';
+>> "%SQL_FILE%" echo END
+>> "%SQL_FILE%" echo GO
+>> "%SQL_FILE%" echo.
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.users', N'full_name') IS NULL ALTER TABLE dbo.users ADD full_name NVARCHAR(255) NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'user_id') IS NULL ALTER TABLE dbo.accounts ADD user_id INT NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'username') IS NULL ALTER TABLE dbo.accounts ADD username NVARCHAR(100) NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'login_name') IS NULL ALTER TABLE dbo.accounts ADD login_name NVARCHAR(100) NULL;
->> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password_hash') IS NULL ALTER TABLE dbo.accounts ADD password_hash NVARCHAR(255) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password') IS NULL ALTER TABLE dbo.accounts ADD password VARCHAR(255) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password') IS NOT NULL ALTER TABLE dbo.accounts ALTER COLUMN password VARCHAR(255) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password_hash') IS NOT NULL AND COL_LENGTH(N'dbo.accounts', N'password') IS NOT NULL
+>> "%SQL_FILE%" echo     EXEC(N'UPDATE dbo.accounts SET password = password_hash WHERE password IS NULL AND password_hash IS NOT NULL');
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password_hash') IS NOT NULL ALTER TABLE dbo.accounts DROP COLUMN password_hash;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password') IS NOT NULL
+>> "%SQL_FILE%" echo     EXEC(N'UPDATE dbo.accounts SET password = N''123456'' WHERE password IS NULL');
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'password') IS NOT NULL ALTER TABLE dbo.accounts ALTER COLUMN password VARCHAR(255) NOT NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.accounts', N'created_at') IS NULL ALTER TABLE dbo.accounts ADD created_at DATETIME2 NOT NULL CONSTRAINT df_accounts_created_at DEFAULT SYSUTCDATETIME();
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.sessions', N'session_token') IS NULL ALTER TABLE dbo.sessions ADD session_token NVARCHAR(255) NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.sessions', N'account_id') IS NULL ALTER TABLE dbo.sessions ADD account_id INT NULL;
@@ -144,6 +219,68 @@ echo [INFO] Generating SQL script...
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.tags', N'user_id') IS NULL ALTER TABLE dbo.tags ADD user_id INT NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.events', N'user_id') IS NULL ALTER TABLE dbo.events ADD user_id INT NULL;
 >> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.events', N'tag_id') IS NULL ALTER TABLE dbo.events ADD tag_id INT NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'user_id') IS NULL ALTER TABLE dbo.discovery_jobs ADD user_id INT NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'status') IS NULL ALTER TABLE dbo.discovery_jobs ADD status NVARCHAR(30) NOT NULL CONSTRAINT df_discovery_jobs_status DEFAULT N'PROCESSING';
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'file_name') IS NULL ALTER TABLE dbo.discovery_jobs ADD file_name NVARCHAR(255) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'result_json') IS NULL ALTER TABLE dbo.discovery_jobs ADD result_json NVARCHAR(MAX) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'error_message') IS NULL ALTER TABLE dbo.discovery_jobs ADD error_message NVARCHAR(MAX) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'created_at') IS NULL ALTER TABLE dbo.discovery_jobs ADD created_at DATETIME2 NOT NULL CONSTRAINT df_discovery_jobs_created_at DEFAULT SYSUTCDATETIME();
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.discovery_jobs', N'completed_at') IS NULL ALTER TABLE dbo.discovery_jobs ADD completed_at DATETIME2 NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'user_id') IS NULL ALTER TABLE dbo.api_knowledge ADD user_id INT NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'discovery_job_id') IS NULL ALTER TABLE dbo.api_knowledge ADD discovery_job_id NVARCHAR(36) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'natural_key') IS NULL ALTER TABLE dbo.api_knowledge ADD natural_key NVARCHAR(64) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'tool_name') IS NULL ALTER TABLE dbo.api_knowledge ADD tool_name NVARCHAR(255) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'portal_url') IS NULL ALTER TABLE dbo.api_knowledge ADD portal_url NVARCHAR(1000) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'method') IS NULL ALTER TABLE dbo.api_knowledge ADD method NVARCHAR(20) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'category') IS NULL ALTER TABLE dbo.api_knowledge ADD category NVARCHAR(100) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'knowledge_json') IS NULL ALTER TABLE dbo.api_knowledge ADD knowledge_json NVARCHAR(MAX) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'created_at') IS NULL ALTER TABLE dbo.api_knowledge ADD created_at DATETIME2 NOT NULL CONSTRAINT df_api_knowledge_created_at DEFAULT SYSUTCDATETIME();
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.api_knowledge', N'updated_at') IS NULL ALTER TABLE dbo.api_knowledge ADD updated_at DATETIME2 NOT NULL CONSTRAINT df_api_knowledge_updated_at DEFAULT SYSUTCDATETIME();
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'capture_id') IS NULL ALTER TABLE dbo.portal_credentials ADD capture_id NVARCHAR(36) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'user_id') IS NULL ALTER TABLE dbo.portal_credentials ADD user_id INT NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'login_tool_id') IS NULL ALTER TABLE dbo.portal_credentials ADD login_tool_id INT NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'portal_url') IS NULL ALTER TABLE dbo.portal_credentials ADD portal_url NVARCHAR(1000) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'login_url_template') IS NULL ALTER TABLE dbo.portal_credentials ADD login_url_template NVARCHAR(2000) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'authorization_header') IS NULL ALTER TABLE dbo.portal_credentials ADD authorization_header NVARCHAR(MAX) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'authorization') IS NOT NULL AND COL_LENGTH(N'dbo.portal_credentials', N'authorization_header') IS NOT NULL
+>> "%SQL_FILE%" echo     EXEC(N'UPDATE dbo.portal_credentials SET authorization_header = [authorization] WHERE authorization_header IS NULL AND [authorization] IS NOT NULL');
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'authorization') IS NOT NULL ALTER TABLE dbo.portal_credentials DROP COLUMN [authorization];
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'cookie') IS NULL ALTER TABLE dbo.portal_credentials ADD cookie NVARCHAR(MAX) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'csrf_token') IS NULL ALTER TABLE dbo.portal_credentials ADD csrf_token NVARCHAR(MAX) NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'expires_at') IS NULL ALTER TABLE dbo.portal_credentials ADD expires_at DATETIMEOFFSET NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'last_captured_at') IS NULL ALTER TABLE dbo.portal_credentials ADD last_captured_at DATETIMEOFFSET NULL;
+>> "%SQL_FILE%" echo IF COL_LENGTH(N'dbo.portal_credentials', N'created_at') IS NULL ALTER TABLE dbo.portal_credentials ADD created_at DATETIME2 NOT NULL CONSTRAINT df_portal_credentials_created_at DEFAULT SYSUTCDATETIME();
+>> "%SQL_FILE%" echo GO
+>> "%SQL_FILE%" echo.
+>> "%SQL_FILE%" echo ;WITH ranked_api_knowledge AS (
+>> "%SQL_FILE%" echo     SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id, natural_key ORDER BY updated_at DESC, id DESC) AS rn
+>> "%SQL_FILE%" echo     FROM dbo.api_knowledge
+>> "%SQL_FILE%" echo     WHERE natural_key IS NOT NULL
+>> "%SQL_FILE%" echo )
+>> "%SQL_FILE%" echo DELETE FROM ranked_api_knowledge WHERE rn ^> 1;
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ux_api_knowledge_scope_natural_key' AND object_id = OBJECT_ID(N'dbo.api_knowledge'))
+>> "%SQL_FILE%" echo BEGIN
+>> "%SQL_FILE%" echo     SET ANSI_NULLS ON;
+>> "%SQL_FILE%" echo     SET QUOTED_IDENTIFIER ON;
+>> "%SQL_FILE%" echo     SET ANSI_PADDING ON;
+>> "%SQL_FILE%" echo     SET ANSI_WARNINGS ON;
+>> "%SQL_FILE%" echo     SET CONCAT_NULL_YIELDS_NULL ON;
+>> "%SQL_FILE%" echo     SET ARITHABORT ON;
+>> "%SQL_FILE%" echo     SET NUMERIC_ROUNDABORT OFF;
+>> "%SQL_FILE%" echo     CREATE UNIQUE INDEX ux_api_knowledge_scope_natural_key ON dbo.api_knowledge(user_id, natural_key);
+>> "%SQL_FILE%" echo END
+>> "%SQL_FILE%" echo GO
+>> "%SQL_FILE%" echo.
+>> "%SQL_FILE%" echo UPDATE dbo.accounts SET user_id = NULL WHERE user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.users WHERE users.id = accounts.user_id);
+>> "%SQL_FILE%" echo UPDATE dbo.sessions SET account_id = NULL WHERE account_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.accounts WHERE accounts.id = sessions.account_id);
+>> "%SQL_FILE%" echo UPDATE dbo.tags SET user_id = NULL WHERE user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.users WHERE users.id = tags.user_id);
+>> "%SQL_FILE%" echo UPDATE dbo.events SET user_id = NULL WHERE user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.users WHERE users.id = events.user_id);
+>> "%SQL_FILE%" echo UPDATE dbo.events SET tag_id = NULL WHERE tag_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.tags WHERE tags.id = events.tag_id);
+>> "%SQL_FILE%" echo UPDATE dbo.discovery_jobs SET user_id = NULL WHERE user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.users WHERE users.id = discovery_jobs.user_id);
+>> "%SQL_FILE%" echo UPDATE dbo.api_knowledge SET user_id = NULL WHERE user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.users WHERE users.id = api_knowledge.user_id);
+>> "%SQL_FILE%" echo UPDATE dbo.api_knowledge SET discovery_job_id = NULL WHERE discovery_job_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.discovery_jobs WHERE discovery_jobs.id = api_knowledge.discovery_job_id);
+>> "%SQL_FILE%" echo UPDATE dbo.portal_credentials SET user_id = NULL WHERE user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.users WHERE users.id = portal_credentials.user_id);
+>> "%SQL_FILE%" echo UPDATE dbo.portal_credentials SET login_tool_id = NULL WHERE login_tool_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.api_knowledge WHERE api_knowledge.id = portal_credentials.login_tool_id);
 >> "%SQL_FILE%" echo GO
 >> "%SQL_FILE%" echo.
 >> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_accounts_users')
@@ -156,6 +293,27 @@ echo [INFO] Generating SQL script...
 >> "%SQL_FILE%" echo     ALTER TABLE dbo.events ADD CONSTRAINT fk_events_tags FOREIGN KEY (tag_id) REFERENCES dbo.tags(id);
 >> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_events_users')
 >> "%SQL_FILE%" echo     ALTER TABLE dbo.events ADD CONSTRAINT fk_events_users FOREIGN KEY (user_id) REFERENCES dbo.users(id);
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_discovery_jobs_users')
+>> "%SQL_FILE%" echo     ALTER TABLE dbo.discovery_jobs ADD CONSTRAINT fk_discovery_jobs_users FOREIGN KEY (user_id) REFERENCES dbo.users(id);
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_api_knowledge_users')
+>> "%SQL_FILE%" echo     ALTER TABLE dbo.api_knowledge ADD CONSTRAINT fk_api_knowledge_users FOREIGN KEY (user_id) REFERENCES dbo.users(id);
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_api_knowledge_discovery_jobs')
+>> "%SQL_FILE%" echo     ALTER TABLE dbo.api_knowledge ADD CONSTRAINT fk_api_knowledge_discovery_jobs FOREIGN KEY (discovery_job_id) REFERENCES dbo.discovery_jobs(id);
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'ux_portal_credentials_capture_id' AND object_id = OBJECT_ID(N'dbo.portal_credentials'))
+>> "%SQL_FILE%" echo BEGIN
+>> "%SQL_FILE%" echo     SET ANSI_NULLS ON;
+>> "%SQL_FILE%" echo     SET QUOTED_IDENTIFIER ON;
+>> "%SQL_FILE%" echo     SET ANSI_PADDING ON;
+>> "%SQL_FILE%" echo     SET ANSI_WARNINGS ON;
+>> "%SQL_FILE%" echo     SET CONCAT_NULL_YIELDS_NULL ON;
+>> "%SQL_FILE%" echo     SET ARITHABORT ON;
+>> "%SQL_FILE%" echo     SET NUMERIC_ROUNDABORT OFF;
+>> "%SQL_FILE%" echo     CREATE UNIQUE INDEX ux_portal_credentials_capture_id ON dbo.portal_credentials(capture_id) WHERE capture_id IS NOT NULL;
+>> "%SQL_FILE%" echo END
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_portal_credentials_users')
+>> "%SQL_FILE%" echo     ALTER TABLE dbo.portal_credentials ADD CONSTRAINT fk_portal_credentials_users FOREIGN KEY (user_id) REFERENCES dbo.users(id);
+>> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'fk_portal_credentials_api_knowledge')
+>> "%SQL_FILE%" echo     ALTER TABLE dbo.portal_credentials ADD CONSTRAINT fk_portal_credentials_api_knowledge FOREIGN KEY (login_tool_id) REFERENCES dbo.api_knowledge(id);
 >> "%SQL_FILE%" echo GO
 >> "%SQL_FILE%" echo.
 >> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM dbo.users WHERE username = N'arufa')
@@ -173,12 +331,12 @@ echo [INFO] Generating SQL script...
 >> "%SQL_FILE%" echo UPDATE dbo.accounts SET login_name = username WHERE login_name IS NULL AND username IS NOT NULL;
 >> "%SQL_FILE%" echo.
 >> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM dbo.accounts WHERE login_name = N'arufa' OR username = N'arufa' OR user_id = @ArufaId)
->> "%SQL_FILE%" echo     INSERT INTO dbo.accounts (user_id, username, login_name, password_hash) VALUES (@ArufaId, N'arufa', N'arufa', N'dev-password-hash-arufa');
+>> "%SQL_FILE%" echo     INSERT INTO dbo.accounts (user_id, username, login_name, password) VALUES (@ArufaId, N'arufa', N'arufa', N'123456');
 >> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM dbo.accounts WHERE login_name = N'thang' OR username = N'thang' OR user_id = @ThangId)
->> "%SQL_FILE%" echo     INSERT INTO dbo.accounts (user_id, username, login_name, password_hash) VALUES (@ThangId, N'thang', N'thang', N'dev-password-hash-thang');
+>> "%SQL_FILE%" echo     INSERT INTO dbo.accounts (user_id, username, login_name, password) VALUES (@ThangId, N'thang', N'thang', N'123456');
 >> "%SQL_FILE%" echo IF NOT EXISTS (SELECT 1 FROM dbo.accounts WHERE login_name = N'hien' OR username = N'hien' OR user_id = @HienId)
->> "%SQL_FILE%" echo     INSERT INTO dbo.accounts (user_id, username, login_name, password_hash) VALUES (@HienId, N'hien', N'hien', N'dev-password-hash-hien');
->> "%SQL_FILE%" echo UPDATE dbo.accounts SET password_hash = N'8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92' WHERE password_hash LIKE N'dev-password-hash-%%';
+>> "%SQL_FILE%" echo     INSERT INTO dbo.accounts (user_id, username, login_name, password) VALUES (@HienId, N'hien', N'hien', N'123456');
+>> "%SQL_FILE%" echo EXEC(N'UPDATE dbo.accounts SET password = N''123456'' WHERE password IS NULL OR password LIKE N''dev-password-hash-%%'' OR password = N''8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92''');
 >> "%SQL_FILE%" echo GO
 >> "%SQL_FILE%" echo.
 >> "%SQL_FILE%" echo DECLARE @ArufaId INT = (SELECT id FROM dbo.users WHERE username = N'arufa');
@@ -227,7 +385,10 @@ echo [INFO] Generating SQL script...
 >> "%SQL_FILE%" echo UNION ALL SELECT 'accounts', COUNT(*) FROM dbo.accounts
 >> "%SQL_FILE%" echo UNION ALL SELECT 'sessions', COUNT(*) FROM dbo.sessions
 >> "%SQL_FILE%" echo UNION ALL SELECT 'tags', COUNT(*) FROM dbo.tags
->> "%SQL_FILE%" echo UNION ALL SELECT 'events', COUNT(*) FROM dbo.events;
+>> "%SQL_FILE%" echo UNION ALL SELECT 'events', COUNT(*) FROM dbo.events
+>> "%SQL_FILE%" echo UNION ALL SELECT 'discovery_jobs', COUNT(*) FROM dbo.discovery_jobs
+>> "%SQL_FILE%" echo UNION ALL SELECT 'api_knowledge', COUNT(*) FROM dbo.api_knowledge
+>> "%SQL_FILE%" echo UNION ALL SELECT 'portal_credentials', COUNT(*) FROM dbo.portal_credentials;
 >> "%SQL_FILE%" echo GO
 
 if /I "%HYPERVISOR%"=="direct" goto RUN_DIRECT
@@ -381,8 +542,8 @@ echo ============================================================
 echo.
 echo Created/updated:
 echo   - Database: %DB_NAME%
-echo   - Tables: users, accounts, sessions, tags, events
-echo   - Foreign keys: accounts-sessions-users-tags-events
+echo   - Tables: users, accounts, sessions, tags, events, discovery_jobs, api_knowledge, portal_credentials
+echo   - Foreign keys: accounts-sessions-users-tags-events-discovery_jobs-api_knowledge-portal_credentials
 echo   - Seed data: 3 users, 3 accounts, 10 tags, 10 events
 echo.
 exit /b 0

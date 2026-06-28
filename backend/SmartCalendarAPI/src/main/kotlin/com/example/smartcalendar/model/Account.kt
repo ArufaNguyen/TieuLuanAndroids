@@ -26,8 +26,8 @@ class Account(
     var loginName: String? = null,
 
     @JsonIgnore
-    @Column(name = "password_hash", nullable = false, length = 255)
-    var passwordHash: String = "",
+    @Column(nullable = false, length = 255)
+    var password: String = "",
 
     @Column(name = "created_at", nullable = false)
     var createdAt: LocalDateTime = LocalDateTime.now(),

@@ -1,11 +1,14 @@
 package com.example.tieuluanandroids.data.api
 
+import com.example.tieuluanandroids.data.model.AppResult
+import com.example.tieuluanandroids.data.model.DiscoveryJob
+import com.example.tieuluanandroids.data.model.SessionInfo
 import okhttp3.JavaNetCookieJar
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.CookieManager
 import java.net.CookiePolicy
@@ -28,60 +31,62 @@ object SmartCalendarApiClient {
     private var cachedBaseUrl: String? = null
 
     @Volatile
-    private var sessionToken: String? = null
-
-    @Volatile
     var devMode: Boolean = false
         private set
 
-    fun login(username: String, password: String): ApiResult {
-        return try {
-            val baseUrl = fetchBaseUrl()
-            val payload = JSONObject()
-                .put("loginName", username)
-                .put("password", password)
-                .toString()
+    fun login(username: String, password: String): LoginApiResult = try {
+        val payload = JSONObject()
+            .put("loginName", username)
+            .put("password", password)
+            .toString()
+        val request = Request.Builder()
+            .url("${fetchBaseUrl()}/api/v1/auth/login")
+            .post(payload.toRequestBody(jsonMediaType))
+            .build()
 
-            val request = Request.Builder()
-                .url("$baseUrl/api/v1/auth/login")
-                .post(payload.toRequestBody(jsonMediaType))
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                val responseBody = response.body?.string().orEmpty()
-                if (!response.isSuccessful) {
-                    return ApiResult(false, "HTTP ${response.code}: $responseBody")
-                }
-
-                val json = JSONObject(responseBody)
-                val code = json.optInt("code", response.code)
-                val message = json.optString("message", "unknown response")
-
-                if (code == 200) {
-                    sessionToken = json.optJSONObject("body")?.optString("sessionToken")
-                    devMode = false
-                    ApiResult(true, "Login success")
-                } else {
-                    ApiResult(false, message)
-                }
+        client.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                return LoginApiResult(false, "HTTP ${response.code}: $responseBody")
             }
-        } catch (error: Exception) {
-            ApiResult(false, error.message ?: "Network error")
+            val json = JSONObject(responseBody)
+            val message = json.optString("message", "unknown response")
+            if (json.optInt("code", response.code) != 200) {
+                return LoginApiResult(false, message)
+            }
+            val body = json.optJSONObject("body")
+                ?: return LoginApiResult(false, "Login response has no body")
+            val token = body.optString("sessionToken")
+            if (token.isBlank()) return LoginApiResult(false, "Login response has no session token")
+
+            devMode = false
+            LoginApiResult(
+                success = true,
+                message = "Login success",
+                token = token,
+                session = SessionInfo(
+                    accountId = body.optInt("accountId"),
+                    userId = body.optInt("userId"),
+                    username = body.optString("username"),
+                    loginName = body.nullableString("loginName"),
+                    email = body.optString("email"),
+                    fullName = body.nullableString("fullName"),
+                    expiresAt = body.optString("expiresAt")
+                )
+            )
         }
+    } catch (error: Exception) {
+        LoginApiResult(false, error.message ?: "Network error")
     }
 
     fun enableDevMode() {
         devMode = true
     }
 
-    fun checkBackendDevMode(): ApiResult {
+    fun checkBackendDevMode(token: String): ApiResult {
         return try {
             val baseUrl = fetchBaseUrl()
-            val token = sessionToken
-                ?: return ApiResult(false, "No session token. Login before checking the current user.")
-            val request = Request.Builder()
-                .url("$baseUrl/api/v1/auth/me")
-                .header("X-Session-Token", token)
+            val request = authenticatedRequest("$baseUrl/api/v1/auth/me", token)
                 .get()
                 .build()
 
@@ -103,34 +108,171 @@ object SmartCalendarApiClient {
         }
     }
 
-    fun getEvents(): EventsResult {
+    fun getRemoteEvents(token: String): RemoteListResult<RemoteEvent> {
         return try {
             val baseUrl = fetchBaseUrl()
-            val request = Request.Builder()
-                .url("$baseUrl/api/v1/events")
+            val request = authenticatedRequest("$baseUrl/api/v1/events", token)
                 .get()
                 .build()
 
             client.newCall(request).execute().use { response ->
                 val responseBody = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
-                    return EventsResult(false, "HTTP ${response.code}: $responseBody", emptyList())
+                    return RemoteListResult(false, "HTTP ${response.code}: $responseBody", emptyList())
                 }
 
                 val json = JSONObject(responseBody)
                 val code = json.optInt("code", response.code)
                 val message = json.optString("message", "unknown response")
                 if (code != 200) {
-                    return EventsResult(false, message, emptyList())
+                    return RemoteListResult(false, message, emptyList())
                 }
 
-                EventsResult(true, message, parseEvents(json.optJSONArray("body")))
+                RemoteListResult(true, message, RemoteJsonParser.parseEvents(json.optJSONArray("body")))
             }
         } catch (error: Exception) {
-            EventsResult(false, error.message ?: "Network error", emptyList())
+            RemoteListResult(false, error.message ?: "Network error", emptyList())
         }
     }
 
+    fun getRemoteTags(token: String): RemoteListResult<RemoteTag> {
+        return try {
+            val request = authenticatedRequest("${fetchBaseUrl()}/api/v1/tags", token)
+                .get()
+                .build()
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return RemoteListResult(false, "HTTP ${response.code}: $responseBody", emptyList())
+                }
+                val json = JSONObject(responseBody)
+                val code = json.optInt("code", response.code)
+                val message = json.optString("message", "unknown response")
+                if (code !in 200..299) return RemoteListResult(false, message, emptyList())
+                RemoteListResult(true, message, RemoteJsonParser.parseTags(json.optJSONArray("body")))
+            }
+        } catch (error: Exception) {
+            RemoteListResult(false, error.message ?: "Network error", emptyList())
+        }
+    }
+
+    fun createRemoteEvent(token: String, payload: JSONObject): RemoteWriteResult =
+        writeJson("/api/v1/events", "POST", token, payload)
+
+    fun updateRemoteEvent(token: String, remoteId: String, payload: JSONObject): RemoteWriteResult =
+        writeJson("/api/v1/events/$remoteId", "PUT", token, payload)
+
+    fun deleteRemoteEvent(token: String, remoteId: String): RemoteWriteResult =
+        delete("/api/v1/events/$remoteId", token)
+
+    fun createRemoteTag(token: String, payload: JSONObject): RemoteWriteResult =
+        writeJson("/api/v1/tags", "POST", token, payload)
+
+    fun updateRemoteTag(token: String, remoteId: String, payload: JSONObject): RemoteWriteResult =
+        writeJson("/api/v1/tags/$remoteId", "PUT", token, payload)
+
+    fun deleteRemoteTag(token: String, remoteId: String): RemoteWriteResult =
+        delete("/api/v1/tags/$remoteId", token)
+
+    fun uploadHar(token: String, userId: Int, fileName: String, bytes: ByteArray): ApiResult {
+        return try {
+            val baseUrl = fetchBaseUrl()
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("user_id", userId.toString())
+                .addFormDataPart(
+                    "file",
+                    fileName,
+                    bytes.toRequestBody("application/json".toMediaType())
+                )
+                .build()
+            val request = authenticatedRequest("$baseUrl/api/v1/analyze/", token)
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return ApiResult(false, "HTTP ${response.code}: $responseBody")
+                }
+
+                val json = JSONObject(responseBody)
+                if (json.optInt("code", response.code) == 202) {
+                    val jobId = json.optJSONObject("body")?.optString("id").orEmpty()
+                    ApiResult(true, if (jobId.isBlank()) "Added file" else "Added file. Job: $jobId")
+                } else {
+                    ApiResult(false, json.optString("message", "Upload failed"))
+                }
+            }
+        } catch (error: Exception) {
+            ApiResult(false, error.message ?: "Network error")
+        }
+    }
+    fun getDiscoveryJobs(
+        token: String
+    ): AppResult<List<DiscoveryJob>> {
+        return try {
+            val request = authenticatedRequest(
+                "${fetchBaseUrl()}/api/v1/analyze",
+                token
+            )
+                .get()
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+
+                if (!response.isSuccessful) {
+                    return AppResult.Error(
+                        "HTTP ${response.code}: $responseBody"
+                    )
+                }
+
+                val json = JSONObject(responseBody)
+                val code = json.optInt("code", response.code)
+
+                if (code != 200) {
+                    return AppResult.Error(
+                        json.optString("message", "Cannot load discovery jobs")
+                    )
+                }
+
+                val body = json.optJSONArray("body")
+                val jobs = buildList {
+                    if (body != null) {
+                        for (index in 0 until body.length()) {
+                            val item = body.optJSONObject(index) ?: continue
+
+                            add(
+                                DiscoveryJob(
+                                    id = item.optString("id"),
+                                    userId = if (item.isNull("userId")) {
+                                        null
+                                    } else {
+                                        item.optInt("userId")
+                                    },
+                                    fileName = item.nullableString("fileName"),
+                                    status = item.optString("status"),
+                                    errorMessage =
+                                        item.nullableString("errorMessage"),
+                                    createdAt = item.optString("createdAt"),
+                                    completedAt =
+                                        item.nullableString("completedAt")
+                                )
+                            )
+                        }
+                    }
+                }
+
+                AppResult.Success(jobs)
+            }
+        } catch (error: Exception) {
+            AppResult.Error(
+                error.message ?: "Cannot load discovery jobs",
+                error
+            )
+        }
+    }
     private fun fetchBaseUrl(): String {
         cachedBaseUrl?.let { return it }
 
@@ -155,46 +297,50 @@ object SmartCalendarApiClient {
         }
     }
 
-    private fun parseEvents(eventsJson: JSONArray?): List<EventItem> {
-        if (eventsJson == null) {
-            return emptyList()
-        }
-
-        return buildList {
-            for (index in 0 until eventsJson.length()) {
-                val item = eventsJson.optJSONObject(index) ?: continue
-                val tag = item.optJSONObject("tag")
-                val user = item.optJSONObject("user")
-
-                add(
-                    EventItem(
-                        title = item.optString("title", ""),
-                        startTime = item.optString("startTime", ""),
-                        endTime = item.optString("endTime", ""),
-                        tagName = tag?.optString("name")?.takeIf { it.isNotBlank() } ?: "-",
-                        ownerName = user?.optString("username")?.takeIf { it.isNotBlank() } ?: "-"
-                    )
-                )
+    private fun writeJson(path: String, method: String, token: String, payload: JSONObject): RemoteWriteResult {
+        return try {
+            val request = authenticatedRequest("${fetchBaseUrl()}$path", token)
+                .method(method, payload.toString().toRequestBody(jsonMediaType))
+                .build()
+            client.newCall(request).execute().use { response ->
+                parseWriteResponse(response.code, response.isSuccessful, response.body?.string().orEmpty())
             }
+        } catch (error: Exception) {
+            RemoteWriteResult(false, error.message ?: "Network error")
         }
     }
+
+    private fun delete(path: String, token: String): RemoteWriteResult {
+        return try {
+            val request = authenticatedRequest("${fetchBaseUrl()}$path", token)
+                .delete()
+                .build()
+            client.newCall(request).execute().use { response ->
+                parseWriteResponse(response.code, response.isSuccessful, response.body?.string().orEmpty())
+            }
+        } catch (error: Exception) {
+            RemoteWriteResult(false, error.message ?: "Network error")
+        }
+    }
+
+    private fun authenticatedRequest(url: String, token: String): Request.Builder {
+        require(token.isNotBlank()) { "Login is required" }
+        return Request.Builder()
+            .url(url)
+            .header("X-Session-Token", token)
+    }
+
+    private fun parseWriteResponse(httpCode: Int, successful: Boolean, responseBody: String): RemoteWriteResult {
+        if (!successful) return RemoteWriteResult(false, "HTTP $httpCode: $responseBody")
+        val json = JSONObject(responseBody)
+        val code = json.optInt("code", httpCode)
+        val message = json.optString("message", "unknown response")
+        if (code !in 200..299) return RemoteWriteResult(false, message)
+        val body = json.optJSONObject("body")
+        return RemoteWriteResult(true, message, body?.opt("id")?.toString())
+    }
+
+    private fun JSONObject.nullableString(name: String): String? =
+        takeUnless { isNull(name) }?.optString(name)?.takeIf { it.isNotBlank() }
+
 }
-
-data class ApiResult(
-    val success: Boolean,
-    val message: String
-)
-
-data class EventsResult(
-    val success: Boolean,
-    val message: String,
-    val events: List<EventItem>
-)
-
-data class EventItem(
-    val title: String,
-    val startTime: String,
-    val endTime: String,
-    val tagName: String,
-    val ownerName: String
-)

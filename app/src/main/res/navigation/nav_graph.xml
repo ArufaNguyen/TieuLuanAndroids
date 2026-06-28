@@ -16,41 +16,59 @@
             app:destination="@id/LoginFragment" />
 
         <action
-            android:id="@+id/action_MenuFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
+            android:id="@+id/action_MenuFragment_to_EventsFragment"
+            app:destination="@id/EventsFragment" />
+
+        <action
+            android:id="@+id/action_MenuFragment_to_AddHarFileFragment"
+            app:destination="@id/AddHarFileFragment" />
+
+        <action
+            android:id="@+id/action_MenuFragment_to_SessionFragment"
+            app:destination="@id/SessionFragment" />
+
     </fragment>
 
     <fragment
+        android:id="@+id/SessionFragment"
+        android:name="com.example.tieuluanandroids.ui.session.SessionFragment"
+        android:label="Session"
+        tools:layout="@layout/session_layout" />
+
+    <fragment
+        android:id="@+id/DiscoveryJobFragment"
+        android:name="com.example.tieuluanandroids.ui.addhar.discoveryjob.DiscoveryJobFragment"
+        android:label="Discovery Job"
+        tools:layout="@layout/discovery_job_layout"
+        />
+
+    <fragment
+        android:id="@+id/AddHarFileFragment"
+        android:name="com.example.tieuluanandroids.ui.addhar.AddHarFileFragment"
+        android:label="@string/add_har_file_label"
+        tools:layout="@layout/add_har_file" >
+        <action
+            android:id="@+id/action_addHarFileFragment_to_discoveryJobsFragment"
+            app:destination="@id/DiscoveryJobFragment" />
+    </fragment>
+
+
+    <fragment
         android:id="@+id/LoginFragment"
-        android:name="com.example.tieuluanandroids.LoginFragment"
+        android:name="com.example.tieuluanandroids.ui.login.LoginFragment"
         android:label="@string/login_fragment_label"
         tools:layout="@layout/fragment_login">
 
         <action
-            android:id="@+id/action_LoginFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment"
+            android:id="@+id/action_LoginFragment_to_EventsFragment"
+            app:destination="@id/EventsFragment"
             app:popUpTo="@id/LoginFragment"
             app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
-        android:id="@+id/FirstFragment"
-        android:name="com.example.tieuluanandroids.FirstFragment"
-        android:label="@string/first_fragment_label"
-        tools:layout="@layout/fragment_first">
-
-        <action
-            android:id="@+id/action_FirstFragment_to_SecondFragment"
-            app:destination="@id/SecondFragment" />
-    </fragment>
-    <fragment
-        android:id="@+id/SecondFragment"
-        android:name="com.example.tieuluanandroids.SecondFragment"
-        android:label="@string/second_fragment_label"
-        tools:layout="@layout/fragment_second">
-
-        <action
-            android:id="@+id/action_SecondFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
-    </fragment>
+        android:id="@+id/EventsFragment"
+        android:name="com.example.tieuluanandroids.ui.events.EventsFragment"
+        android:label="@string/events_fragment_label"
+        tools:layout="@layout/fragment_events" />
 </navigation>

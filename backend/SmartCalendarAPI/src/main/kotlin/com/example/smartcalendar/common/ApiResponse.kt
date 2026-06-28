@@ -10,6 +10,8 @@ open class ApiResponse<T>(
 
         fun <T> created(body: T?): ApiResponse<T> = ApiResponse(201, "created", body)
 
+        fun <T> accepted(body: T?): ApiResponse<T> = ApiResponse(202, "processing", body)
+
         fun <T> badRequest(message: String): ApiResponse<T> = ApiResponse(400, message, null)
 
         fun <T> unauthorized(message: String): ApiResponse<T> = ApiResponse(401, message, null)

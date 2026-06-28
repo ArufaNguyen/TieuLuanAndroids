@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.multipart.MaxUploadSizeExceededException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
@@ -34,6 +35,11 @@ class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException::class)
     fun handleNoResource(exception: NoResourceFoundException): ApiResponse<Nothing> {
         return ApiResponse.notFound("resource not found")
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    fun handleMaxUploadSize(exception: MaxUploadSizeExceededException): ApiResponse<Nothing> {
+        return ApiResponse(413, "uploaded file exceeds the configured maximum size", null)
     }
 
     @ExceptionHandler(Exception::class)

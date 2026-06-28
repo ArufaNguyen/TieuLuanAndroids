@@ -5,7 +5,6 @@
     android:gravity="center"
     android:orientation="vertical"
     android:padding="24dp">
-
     <Button
         android:id="@+id/button_login"
         android:layout_width="match_parent"
@@ -25,5 +24,18 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:text="Button1" />
+
+    <Button
+        android:id="@+id/button_session"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Session" />
+    <Button
+        android:id="@+id/button_add_HAR_file"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Add HAR file" />
 
 </LinearLayout>
