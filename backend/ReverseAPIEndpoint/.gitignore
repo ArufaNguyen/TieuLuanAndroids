@@ -1,0 +1,17 @@
+.gradle/
+.kotlin/
+build/
+out/
+*.iml
+.idea/
+local.properties
+
+# Local secrets
+.env
+.env.local
+**/.env
+**/.env.local
+*.key
+
+# Local generated API knowledge
+.portal-discovery/

@@ -15,6 +15,7 @@ java {
 }
 
 dependencies {
+    implementation(project(":reverse-api-endpoint"))
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -23,10 +24,13 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("com.microsoft.sqlserver:mssql-jdbc")
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {

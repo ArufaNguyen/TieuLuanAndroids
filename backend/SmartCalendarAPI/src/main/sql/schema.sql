@@ -16,7 +16,7 @@ CREATE TABLE accounts (
     user_id INT NOT NULL UNIQUE,
     username NVARCHAR(100) NOT NULL UNIQUE,
     login_name NVARCHAR(100) NOT NULL UNIQUE,
-    password_hash NVARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
 
     CONSTRAINT fk_accounts_users
@@ -65,3 +65,43 @@ CREATE TABLE events (
         FOREIGN KEY (user_id)
         REFERENCES users(id)
 );
+
+CREATE TABLE discovery_jobs (
+    id NVARCHAR(36) PRIMARY KEY,
+    user_id INT NULL,
+    status NVARCHAR(30) NOT NULL,
+    file_name NVARCHAR(255),
+    result_json NVARCHAR(MAX),
+    error_message NVARCHAR(MAX),
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    completed_at DATETIME2,
+
+    CONSTRAINT fk_discovery_jobs_users
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+);
+
+CREATE TABLE api_knowledge (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    user_id INT NULL,
+    discovery_job_id NVARCHAR(36) NULL,
+    natural_key NVARCHAR(64) NOT NULL,
+    tool_name NVARCHAR(255) NOT NULL,
+    portal_url NVARCHAR(1000) NOT NULL,
+    method NVARCHAR(20) NOT NULL,
+    category NVARCHAR(100) NOT NULL,
+    knowledge_json NVARCHAR(MAX) NOT NULL,
+    created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT fk_api_knowledge_users
+        FOREIGN KEY (user_id)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_api_knowledge_discovery_jobs
+        FOREIGN KEY (discovery_job_id)
+        REFERENCES discovery_jobs(id)
+);
+
+CREATE UNIQUE INDEX ux_api_knowledge_scope_natural_key
+    ON api_knowledge(user_id, natural_key);

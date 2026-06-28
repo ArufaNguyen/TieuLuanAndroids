@@ -11,7 +11,6 @@ import com.example.smartcalendar.repository.AccountRepository
 import com.example.smartcalendar.repository.UserRepository
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
-import java.security.MessageDigest
 
 @Service
 class AccountService(
@@ -39,7 +38,7 @@ class AccountService(
 
         val user = userRepository.findById(userId).orElse(null) ?: return ApiResponse.notFound("user not found")
         val account = accountRepository.save(
-            Account(username = request.username, loginName = loginName, passwordHash = hashPassword(request.password), user = user)
+            Account(username = request.username, loginName = loginName, password = request.password, user = user)
         )
         return ApiResponse.created(toDetail(account))
     }
@@ -57,7 +56,7 @@ class AccountService(
         account.username = request.username
         account.loginName = loginName
         account.user = user
-        request.password?.takeIf { it.isNotBlank() }?.let { account.passwordHash = hashPassword(it) }
+        request.password?.takeIf { it.isNotBlank() }?.let { account.password = it }
         return ApiResponse.success(toDetail(accountRepository.save(account)))
     }
 
@@ -83,9 +82,4 @@ class AccountService(
         user = account.user?.let { UserResponse(it.id, it.username, it.email, it.fullName) }
     )
 
-    // TODO: Replace plain SHA-256 with BCrypt before production use.
-    private fun hashPassword(password: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
 }

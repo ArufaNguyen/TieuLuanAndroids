@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Global API Knowledge</title>
+<h3>Global API Knowledge Presets</h3>
+<p><a href="/login.html">Login</a> | <a href="/tools.html">Tools</a> | <a href="/upload-har.html">Upload HAR</a> | <a href="/agent-chat.html">Agent Chat</a> | <a href="/portal-credential-capture.html">Credential Capture</a></p>
+<p>User: <span id="userId">?</span></p>
+
+<button onclick="loadAll()">Reload</button>
+
+<h4>Global Presets</h4>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead><tr><th>ID</th><th>Tool</th><th>Category</th><th>Method</th><th>URL</th><th>Delete</th></tr></thead>
+  <tbody id="globalRows"></tbody>
+</table>
+
+<h4>Custom Tools</h4>
+<p>Copy a custom/user tool into global presets. The user prefix is stripped, for example <code>user_1_login</code> becomes <code>login</code>.</p>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead><tr><th>ID</th><th>Scope</th><th>Tool</th><th>Category</th><th>Method</th><th>URL</th><th>Copy</th></tr></thead>
+  <tbody id="customRows"></tbody>
+</table>
+
+<h4>Add / Upsert Global Preset</h4>
+<p>Use this for reusable presets. URL placeholders like <code>{date}</code> become params automatically.</p>
+<p>Tool name<br><input id="presetToolName" size="60" placeholder="login / get_student_schedule"></p>
+<p>Category<br>
+  <select id="presetCategory">
+    <option>OTHER</option>
+    <option>LOGIN</option>
+    <option>SCHEDULE</option>
+    <option>REGISTERED_COURSES</option>
+    <option>AVAILABLE_COURSES</option>
+    <option>RETAKE_COURSES</option>
+    <option>NOTIFICATION</option>
+    <option>SEMESTER</option>
+  </select>
+</p>
+<p>Method<br>
+  <select id="presetMethod">
+    <option>GET</option>
+    <option>POST</option>
+    <option>PUT</option>
+    <option>PATCH</option>
+    <option>DELETE</option>
+  </select>
+</p>
+<p>URL<br><input id="presetUrl" size="120" placeholder="https://portal.ut.edu.vn/api/v1/lichhoc/lichTuan?date={date}"></p>
+<p>Headers JSON<br>
+  <textarea id="presetHeaders" rows="7" cols="120" placeholder='{"Accept":"application/json","Authorization":"Bearer ..."}'></textarea>
+</p>
+<p>Credential header names, comma separated<br>
+  <input id="presetCredentialHeaders" size="120" placeholder="Authorization,Cookie">
+</p>
+<p>Extra params, comma separated<br>
+  <input id="presetParams" size="120" placeholder="date,idDot">
+</p>
+<p>Body JSON<br>
+  <textarea id="presetBody" rows="7" cols="120" placeholder='{"username":"","password":""}'></textarea>
+</p>
+<button onclick="addPreset()">Add global preset</button>
+
+<details>
+  <summary>Advanced: Add raw ApiKnowledge JSON</summary>
+  <p>Paste one ApiKnowledge JSON object. Existing preset with same natural key will be overwritten.</p>
+  <textarea id="knowledgeJson" rows="14" cols="120" placeholder='{"toolName":"login","category":"LOGIN",...}'></textarea><br><br>
+  <button onclick="addGlobal()">Add raw global knowledge</button>
+</details>
+
+<pre id="out"></pre>
+
+<script>
+const token = () => localStorage.getItem('sessionToken') || '';
+userId.textContent = localStorage.getItem('userId') || '?';
+
+async function loadAll() {
+  await Promise.all([loadGlobal(), loadMine()]);
+}
+
+async function loadGlobal() {
+  const res = await fetch('/api/v1/api-knowledge/global');
+  const json = await res.json();
+  if (json.code !== 200) {
+    out.textContent = JSON.stringify(json, null, 2);
+    return;
+  }
+  globalRows.innerHTML = '';
+  for (const item of json.body || []) {
+    const tr = document.createElement('tr');
+    const url = item.knowledge && item.knowledge.urlTemplate ? item.knowledge.urlTemplate : item.portalUrl;
+    tr.innerHTML =
+      `<td>${item.id}</td><td>${escapeHtml(item.toolName)}</td><td>${item.category}</td><td>${item.method}</td>` +
+      `<td>${escapeHtml(url)}</td><td><button data-id="${item.id}">Delete</button></td>`;
+    tr.querySelector('button').onclick = e => deleteKnowledge(Number(e.target.dataset.id));
+    globalRows.appendChild(tr);
+  }
+}
+
+async function loadMine() {
+  const res = await fetch('/api/v1/api-knowledge/me', {
+    headers: {'X-Session-Token': token()}
+  });
+  const json = await res.json();
+  if (json.code !== 200) {
+    customRows.innerHTML = '';
+    out.textContent = JSON.stringify(json, null, 2);
+    return;
+  }
+  customRows.innerHTML = '';
+  for (const item of (json.body || []).filter(item => item.scope === 'CUSTOM')) {
+    const tr = document.createElement('tr');
+    const url = item.knowledge && item.knowledge.urlTemplate ? item.knowledge.urlTemplate : item.portalUrl;
+    tr.innerHTML =
+      `<td>${item.id}</td><td>${item.scope}</td><td>${escapeHtml(item.toolName)}</td><td>${item.category}</td>` +
+      `<td>${item.method}</td><td>${escapeHtml(url)}</td>` +
+      `<td><button data-id="${item.id}">Copy global</button></td>`;
+    tr.querySelector('button').onclick = e => copyToGlobal(Number(e.target.dataset.id));
+    customRows.appendChild(tr);
+  }
+}
+
+async function addGlobal() {
+  let parsed;
+  try {
+    parsed = JSON.parse(knowledgeJson.value.trim());
+  } catch (e) {
+    out.textContent = 'Invalid JSON: ' + e.message;
+    return;
+  }
+  const res = await fetch('/api/v1/api-knowledge/global', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Session-Token': token()},
+    body: JSON.stringify({knowledge: parsed})
+  });
+  const json = await res.json();
+  out.textContent = JSON.stringify(json, null, 2);
+  await loadAll();
+}
+
+async function addPreset() {
+  let headers = {};
+  let bodyValue = null;
+  try {
+    headers = presetHeaders.value.trim() ? JSON.parse(presetHeaders.value.trim()) : {};
+  } catch (e) {
+    out.textContent = 'Invalid Headers JSON: ' + e.message;
+    return;
+  }
+  try {
+    bodyValue = presetBody.value.trim() ? JSON.parse(presetBody.value.trim()) : null;
+  } catch (e) {
+    out.textContent = 'Invalid Body JSON: ' + e.message;
+    return;
+  }
+  const payload = {
+    toolName: presetToolName.value.trim() || null,
+    category: presetCategory.value,
+    method: presetMethod.value,
+    url: presetUrl.value.trim(),
+    headers,
+    credentialHeaders: splitCsv(presetCredentialHeaders.value),
+    params: splitCsv(presetParams.value),
+    body: bodyValue
+  };
+  const res = await fetch('/api/v1/api-knowledge/global/preset', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Session-Token': token()},
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  out.textContent = JSON.stringify(json, null, 2);
+  await loadAll();
+}
+
+async function copyToGlobal(id) {
+  const res = await fetch('/api/v1/api-knowledge/' + encodeURIComponent(id) + '/copy-to-global', {
+    method: 'POST',
+    headers: {'X-Session-Token': token()}
+  });
+  const json = await res.json();
+  out.textContent = JSON.stringify(json, null, 2);
+  await loadAll();
+}
+
+async function deleteKnowledge(id) {
+  const res = await fetch('/api/v1/api-knowledge/' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: {'X-Session-Token': token()}
+  });
+  const json = await res.json();
+  out.textContent = JSON.stringify(json, null, 2);
+  await loadAll();
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function splitCsv(value) {
+  return value.split(',').map(v => v.trim()).filter(Boolean);
+}
+
+loadAll();
+</script>
+</html>

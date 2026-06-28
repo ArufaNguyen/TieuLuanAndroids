@@ -36,24 +36,50 @@ if /i not "%HYPERVISOR%"=="docker" if /i not "%HYPERVISOR%"=="direct" (
     goto :failed
 )
 
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"`) do set "PATH=%%P"
+
 where winget >nul 2>&1
 if errorlevel 1 (
     echo [WARN] winget is not installed. Automatic software install will be skipped.
     echo Install JDK 21 manually, and Docker Desktop only if using docker mode.
 ) else (
-    call :install_package "EclipseAdoptium.Temurin.21.JDK" "JDK 21"
-    if errorlevel 1 goto :failed
+    call :ensure_java_available
+    if errorlevel 1 (
+        call :install_package "EclipseAdoptium.Temurin.21.JDK" "JDK 21"
+        if errorlevel 1 goto :failed
+        for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"`) do set "PATH=%%P"
+        call :ensure_java_available
+        if errorlevel 1 goto :failed
+    )
 
-    call :install_package "Cloudflare.cloudflared" "Cloudflared"
-    if errorlevel 1 goto :failed
+    where cloudflared >nul 2>&1
+    if errorlevel 1 (
+        call :install_package "Cloudflare.cloudflared" "Cloudflared"
+        if errorlevel 1 goto :failed
+        for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"`) do set "PATH=%%P"
+    ) else (
+        echo [OK] Cloudflared is already available.
+    )
+    set "DEFAULT_AUTO_START_TUNNEL=true"
 
     if /i "%HYPERVISOR%"=="docker" (
-        call :install_package "Docker.DockerDesktop" "Docker Desktop"
-        if errorlevel 1 goto :failed
+        where docker >nul 2>&1
+        if errorlevel 1 (
+            if exist "C:\Program Files\Docker\Docker\resources\bin\docker.exe" set "PATH=%PATH%;C:\Program Files\Docker\Docker\resources\bin"
+        )
+        where docker >nul 2>&1
+        if errorlevel 1 (
+            call :install_package "Docker.DockerDesktop" "Docker Desktop"
+            if errorlevel 1 goto :failed
+        ) else (
+            echo [OK] Docker CLI is already available.
+        )
     )
 )
 
 for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')"`) do set "PATH=%%P"
+call :ensure_java_available
+if errorlevel 1 goto :failed
 
 where java >nul 2>&1
 if errorlevel 1 (
@@ -79,7 +105,7 @@ if not exist "backend\SmartCalendarAPI\.env" (
     )
 
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$content = @(('HYPERVISOR=' + $env:HYPERVISOR),'DB_HOST=localhost',('DB_PORT=' + $env:DEFAULT_DB_PORT),'DB_NAME=SmartCalendarDB','DB_USERNAME=sa',('DB_PASSWORD=' + $env:DB_PASSWORD),'','SERVER_PORT=7923','','DEV_MODE=true','AUTO_START_TUNNEL=true'); [IO.File]::WriteAllLines('backend\SmartCalendarAPI\.env', $content)"
+      "$content = @(('HYPERVISOR=' + $env:HYPERVISOR),'DB_HOST=localhost',('DB_PORT=' + $env:DEFAULT_DB_PORT),'DB_NAME=SmartCalendarDB','DB_USERNAME=sa',('DB_PASSWORD=' + $env:DB_PASSWORD),'','SERVER_PORT=7923','','DEV_MODE=true',('AUTO_START_TUNNEL=' + $env:DEFAULT_AUTO_START_TUNNEL),'HAR_MAX_FILE_SIZE=30MB','','NINEROUTER_URL=http://localhost:20128','NINEROUTER_KEY=','','FOZA_BASE_URL=https://api.foza.ai/v1','FOZA_API_KEY=','','# Agent model routing','NINEROUTER_PALAMEDES_MODEL=openrouter-combo','NINEROUTER_PERCIVAL_MODEL=openrouter-combo','NINEROUTER_KAY_MODEL=openrouter-combo','NINEROUTER_MORGAN_MODEL=opencode-combo','NINEROUTER_AGENT_CHAT_MODEL=openrouter-combo','NINEROUTER_AGENT_CHAT_ENABLED=true','FOZA_MERLIN_MODEL=hoang/claude-sonnet-4.6','FOZA_MERLIN_FALLBACK_MODEL=hoang/gpt-5.5','# Local/no-model agents: GalahadCollectorAgent, GawainSafetyAgent, ScheduleSignalAgent, ArthurJudgeAgent, MordredReplayGatekeeper, BedivereToolDesignerAgent'); [IO.File]::WriteAllLines('backend\SmartCalendarAPI\.env', $content)"
 
     if errorlevel 1 (
         echo [ERROR] Could not create backend .env.
@@ -88,8 +114,14 @@ if not exist "backend\SmartCalendarAPI\.env" (
     echo [OK] Created backend\SmartCalendarAPI\.env
 ) else (
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$path='backend\SmartCalendarAPI\.env'; $lines=[System.Collections.Generic.List[string]](Get-Content $path); function Upsert($key,$value){ $idx=-1; for($i=0;$i -lt $lines.Count;$i++){ if($lines[$i] -match ('^' + [regex]::Escape($key) + '=')){ $idx=$i; break } }; if($idx -ge 0){ $lines[$idx]=$key + '=' + $value } else { $lines.Add($key + '=' + $value) } }; function Ensure($key,$value){ $idx=-1; for($i=0;$i -lt $lines.Count;$i++){ if($lines[$i] -match ('^' + [regex]::Escape($key) + '=')){ $idx=$i; break } }; if($idx -lt 0 -or [string]::IsNullOrWhiteSpace($lines[$idx].Substring($lines[$idx].IndexOf('=') + 1))){ Upsert $key $value } }; Upsert 'HYPERVISOR' $env:HYPERVISOR; Upsert 'DB_HOST' 'localhost'; Upsert 'DB_PORT' $env:DEFAULT_DB_PORT; Ensure 'DB_NAME' 'SmartCalendarDB'; Ensure 'DB_USERNAME' 'sa'; Ensure 'SERVER_PORT' '7923'; Ensure 'DEV_MODE' 'true'; Ensure 'AUTO_START_TUNNEL' 'true'; [IO.File]::WriteAllLines($path,$lines)"
+      "$path='backend\SmartCalendarAPI\.env'; $lines=[System.Collections.Generic.List[string]](Get-Content $path); function Upsert($key,$value){ $idx=-1; for($i=0;$i -lt $lines.Count;$i++){ if($lines[$i] -match ('^' + [regex]::Escape($key) + '=')){ $idx=$i; break } }; if($idx -ge 0){ $lines[$idx]=$key + '=' + $value } else { $lines.Add($key + '=' + $value) } }; function Ensure($key,$value){ $idx=-1; for($i=0;$i -lt $lines.Count;$i++){ if($lines[$i] -match ('^' + [regex]::Escape($key) + '=')){ $idx=$i; break } }; if($idx -lt 0 -or [string]::IsNullOrWhiteSpace($lines[$idx].Substring($lines[$idx].IndexOf('=') + 1))){ Upsert $key $value } }; function Remove($key){ for($i=$lines.Count-1;$i -ge 0;$i--){ if($lines[$i] -match ('^' + [regex]::Escape($key) + '=')){ $lines.RemoveAt($i) } } }; function EnsureComment($value){ if(-not ($lines -contains $value)){ $lines.Add($value) } }; Upsert 'HYPERVISOR' $env:HYPERVISOR; Upsert 'DB_HOST' 'localhost'; Upsert 'DB_PORT' $env:DEFAULT_DB_PORT; Ensure 'DB_NAME' 'SmartCalendarDB'; Ensure 'DB_USERNAME' 'sa'; Ensure 'SERVER_PORT' '7923'; Ensure 'DEV_MODE' 'true'; Ensure 'AUTO_START_TUNNEL' $env:DEFAULT_AUTO_START_TUNNEL; Ensure 'HAR_MAX_FILE_SIZE' '30MB'; Ensure 'NINEROUTER_URL' 'http://localhost:20128'; Ensure 'NINEROUTER_KEY' ''; Ensure 'FOZA_BASE_URL' 'https://api.foza.ai/v1'; Ensure 'FOZA_API_KEY' ''; for($i=$lines.Count-1;$i -ge 0;$i--){ if($lines[$i] -match '^((?:NINEROUTER|FOZA)_[A-Z0-9_]*(?:MODEL|COMBO))=' -and $matches[1] -notin @('NINEROUTER_PALAMEDES_MODEL','NINEROUTER_PERCIVAL_MODEL','NINEROUTER_KAY_MODEL','NINEROUTER_MORGAN_MODEL','NINEROUTER_AGENT_CHAT_MODEL','FOZA_MERLIN_MODEL','FOZA_MERLIN_FALLBACK_MODEL')){ $lines.RemoveAt($i) } }; EnsureComment ''; EnsureComment '# Agent model routing'; Ensure 'NINEROUTER_PALAMEDES_MODEL' 'openrouter-combo'; Ensure 'NINEROUTER_PERCIVAL_MODEL' 'openrouter-combo'; Ensure 'NINEROUTER_KAY_MODEL' 'openrouter-combo'; Ensure 'NINEROUTER_MORGAN_MODEL' 'opencode-combo'; Ensure 'NINEROUTER_AGENT_CHAT_MODEL' 'openrouter-combo'; Ensure 'NINEROUTER_AGENT_CHAT_ENABLED' 'true'; Ensure 'FOZA_MERLIN_MODEL' 'hoang/claude-sonnet-4.6'; Ensure 'FOZA_MERLIN_FALLBACK_MODEL' 'hoang/gpt-5.5'; EnsureComment '# Local/no-model agents: GalahadCollectorAgent, GawainSafetyAgent, ScheduleSignalAgent, ArthurJudgeAgent, MordredReplayGatekeeper, BedivereToolDesignerAgent'; [IO.File]::WriteAllLines($path,$lines)"
     echo [OK] Updated database mode and ensured required backend settings in backend\SmartCalendarAPI\.env
+)
+
+if exist "backend\ReverseAPIEndpoint" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+      "$source='backend\SmartCalendarAPI\.env'; $target='backend\ReverseAPIEndpoint\.env'; $wanted='FOZA_BASE_URL','FOZA_API_KEY','FOZA_MERLIN_MODEL','FOZA_MERLIN_FALLBACK_MODEL','NINEROUTER_URL','NINEROUTER_KEY','NINEROUTER_PALAMEDES_MODEL','NINEROUTER_PERCIVAL_MODEL','NINEROUTER_KAY_MODEL','NINEROUTER_MORGAN_MODEL','NINEROUTER_AGENT_CHAT_MODEL','NINEROUTER_AGENT_CHAT_ENABLED'; $map=@{}; Get-Content $source | ForEach-Object { if($_ -match '^([^#=]+)=(.*)$'){ $map[$matches[1]]=$matches[2] } }; $lines=@(); foreach($key in $wanted){ if($map.ContainsKey($key)){ $lines += ($key + '=' + $map[$key]) } }; if($lines.Count -gt 0){ [IO.File]::WriteAllLines($target,$lines) }"
+    echo [OK] Synced ReverseAPIEndpoint runtime .env values from backend .env
 )
 
 if exist "tunnel-url-publisher" (
@@ -110,11 +142,13 @@ set "DB_PASSWORD="
 set "DB_PORT="
 set "DB_NAME="
 set "DB_USERNAME="
+set "SERVER_PORT="
 for /f "usebackq tokens=1,* delims==" %%A in ("backend\SmartCalendarAPI\.env") do (
     if /i "%%A"=="DB_PASSWORD" set "DB_PASSWORD=%%B"
     if /i "%%A"=="DB_PORT" set "DB_PORT=%%B"
     if /i "%%A"=="DB_NAME" set "DB_NAME=%%B"
     if /i "%%A"=="DB_USERNAME" set "DB_USERNAME=%%B"
+    if /i "%%A"=="SERVER_PORT" set "SERVER_PORT=%%B"
 )
 if not defined DB_PASSWORD (
     echo [ERROR] DB_PASSWORD is missing from backend\SmartCalendarAPI\.env
@@ -123,6 +157,7 @@ if not defined DB_PASSWORD (
 if not defined DB_PORT set "DB_PORT=%DEFAULT_DB_PORT%"
 if not defined DB_NAME set "DB_NAME=SmartCalendarDB"
 if not defined DB_USERNAME set "DB_USERNAME=sa"
+if not defined SERVER_PORT set "SERVER_PORT=7923"
 
 if /i "%HYPERVISOR%"=="direct" goto :direct_mode
 
@@ -154,7 +189,7 @@ echo [OK] Docker daemon is running.
 docker inspect TLANDROIDserver >nul 2>&1
 if errorlevel 1 (
     echo [SETUP] Creating MSSQL container TLANDROIDserver...
-    docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=%DB_PASSWORD%" -p 6969:1433 --name TLANDROIDserver -v mssql_data:/var/opt/mssql -d mcr.microsoft.com/mssql/server:2022-latest
+    docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=%DB_PASSWORD%" -p %DB_PORT%:1433 --name TLANDROIDserver -v mssql_data:/var/opt/mssql -d mcr.microsoft.com/mssql/server:2022-latest
     if errorlevel 1 (
         echo [ERROR] Could not create MSSQL container.
         goto :failed
@@ -216,10 +251,20 @@ java -version
 
 echo.
 echo [VERIFY] Building backend...
-call gradlew.bat :backend:build --console=plain
+call gradlew.bat -PskipAndroidApp=true :backend:build --console=plain
 if errorlevel 1 (
     echo [ERROR] Backend build failed.
     goto :failed
+)
+
+echo.
+echo [SETUP] Opening Windows Firewall for backend port %SERVER_PORT%...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$port=[int]$env:SERVER_PORT; $name='SmartCalendar Backend ' + $port; if(-not (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue)){ New-NetFirewallRule -DisplayName $name -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port | Out-Null }; exit 0"
+if errorlevel 1 (
+    echo [WARN] Could not create firewall rule automatically. Open TCP port %SERVER_PORT% manually if remote clients cannot connect.
+) else (
+    echo [OK] Firewall rule is ready for TCP port %SERVER_PORT%.
 )
 
 echo.
@@ -231,15 +276,17 @@ echo HYPERVISOR=%HYPERVISOR%
 echo.
 if /i "%HYPERVISOR%"=="docker" (
     echo Run backend:
-    echo   gradlew.bat :backend:bootRun
+    echo   gradlew.bat -PskipAndroidApp=true :backend:bootRun --console=plain
 ) else (
     echo Run backend without Docker:
-    echo   gradlew.bat :backend:bootJar
+    echo   gradlew.bat -PskipAndroidApp=true :backend:bootJar --console=plain
     echo   java -jar backend\SmartCalendarAPI\build\libs\backend-0.0.1-SNAPSHOT.jar
 )
 echo.
 echo Backend URL:
-echo   http://localhost:7923
+echo   http://localhost:%SERVER_PORT%
+echo Analyze HAR route:
+echo   http://localhost:%SERVER_PORT%/api/v1/analyze/
 echo.
 pause
 exit /b 0
@@ -247,7 +294,10 @@ exit /b 0
 :install_package
 echo.
 echo [INSTALL] %~2...
-winget install --id "%~1" --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
+set "PKG_ID=%~1"
+set "PKG_TIMEOUT=1200"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$id=$env:PKG_ID; $timeout=[int]$env:PKG_TIMEOUT; $args=@('install','--id',$id,'--exact','--silent','--accept-package-agreements','--accept-source-agreements','--disable-interactivity'); $p=Start-Process -FilePath 'winget' -ArgumentList $args -PassThru; if(-not $p.WaitForExit($timeout * 1000)){ try { Stop-Process -Id $p.Id -Force } catch {}; Write-Host ('[ERROR] winget timeout after ' + $timeout + ' seconds.'); exit 124 }; exit $p.ExitCode"
 if errorlevel 1 (
     echo [ERROR] Failed to install %~2.
     exit /b 1
@@ -255,13 +305,31 @@ if errorlevel 1 (
 echo [OK] %~2 is installed.
 exit /b 0
 
+:ensure_java_available
+where java >nul 2>&1
+if not errorlevel 1 (
+    echo [OK] Java is already available.
+    exit /b 0
+)
+
+for /f "usebackq delims=" %%J in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$roots=@('C:\Program Files\Eclipse Adoptium','C:\Program Files\Java','D:\Java'); foreach($root in $roots){ if(Test-Path $root){ $java=Get-ChildItem -LiteralPath $root -Recurse -Filter java.exe -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match '\\bin\\java\.exe$' } | Sort-Object FullName -Descending | Select-Object -First 1; if($java){ Split-Path (Split-Path $java.FullName -Parent) -Parent; exit 0 } } }; exit 1"`) do set "JAVA_HOME=%%J"
+
+if defined JAVA_HOME (
+    set "PATH=%JAVA_HOME%\bin;%PATH%"
+    echo [OK] Java found at %JAVA_HOME%
+    exit /b 0
+)
+
+echo [WARN] Java is not available yet.
+exit /b 1
+
 :ensure_direct_sql_server
 echo.
 echo [SETUP] Checking direct SQL Server installation...
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Service MSSQLSERVER -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Service MSSQLSERVER -ErrorAction SilentlyContinue) { exit 0 } elseif (Get-Service 'MSSQL$SQLEXPRESS' -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
 if not errorlevel 1 (
-    echo [OK] SQL Server default instance MSSQLSERVER already exists.
+    echo [OK] SQL Server service already exists.
     goto :configure_direct_sql_server
 )
 
@@ -274,7 +342,7 @@ if errorlevel 1 (
 
 echo [INSTALL] SQL Server 2022 Express...
 echo This can take several minutes.
-winget install --id Microsoft.SQLServer.2022.Express --exact --silent --accept-package-agreements --accept-source-agreements --disable-interactivity
+call :install_package "Microsoft.SQLServer.2022.Express" "SQL Server 2022 Express"
 if errorlevel 1 (
     echo [ERROR] winget could not install SQL Server Express.
     echo If a SQL Server Installation Center window is open, close it and run this file again.

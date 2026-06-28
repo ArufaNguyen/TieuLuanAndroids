@@ -23,12 +23,26 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "TieuLuanAndroids"
-include(":app")
+
+val skipAndroidApp = providers.gradleProperty("skipAndroidApp")
+    .orNull
+    ?.equals("true", ignoreCase = true)
+    ?: false
+
+if (!skipAndroidApp) {
+    include(":app")
+}
 
 val backendDir = file("backend/SmartCalendarAPI")
 if (backendDir.exists()) {
     include(":backend")
     project(":backend").projectDir = backendDir
+}
+
+val reverseApiEndpointDir = file("backend/ReverseAPIEndpoint")
+if (reverseApiEndpointDir.exists()) {
+    include(":reverse-api-endpoint")
+    project(":reverse-api-endpoint").projectDir = reverseApiEndpointDir
 }
 
 val tunnelPublisherDir = file("tunnel-url-publisher")

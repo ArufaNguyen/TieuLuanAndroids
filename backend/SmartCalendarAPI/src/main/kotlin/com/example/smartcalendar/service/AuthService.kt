@@ -13,7 +13,6 @@ import com.example.smartcalendar.repository.SessionRepository
 import com.example.smartcalendar.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -38,7 +37,7 @@ class AuthService(
             Account(
                 username = request.username,
                 loginName = loginName,
-                passwordHash = hashPassword(request.password),
+                password = request.password,
                 user = user
             )
         )
@@ -51,7 +50,7 @@ class AuthService(
             .orElseGet { accountRepository.findByUsername(request.loginName).orElse(null) }
             ?: return ApiResponse.unauthorized("invalid login name or password")
 
-        if (account.passwordHash != hashPassword(request.password)) {
+        if (account.password != request.password) {
             return ApiResponse.unauthorized("invalid login name or password")
         }
 
@@ -102,9 +101,4 @@ class AuthService(
         )
     }
 
-    // TODO: Replace plain SHA-256 with BCrypt before production use.
-    private fun hashPassword(password: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
 }
