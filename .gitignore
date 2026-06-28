@@ -13,3 +13,16 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Local secrets
+.env
+**/.env
+
+# Gradle/build output in nested modules
+**/.gradle/
+**/.kotlin/
+**/build/
+**/bin/
+
+backend
+tunnel-url-publisher

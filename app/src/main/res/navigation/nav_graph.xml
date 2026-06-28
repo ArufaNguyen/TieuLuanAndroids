@@ -4,14 +4,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
     app:startDestination="@id/MenuFragment">
+
     <fragment
         android:id="@+id/MenuFragment"
         android:name="com.example.tieuluanandroids.View_Calendar_Fragment"
-        android:label="@string/view_fragment_label"
+        android:label="@string/menu_fragment_label"
         tools:layout="@layout/fragment_calendar_view">
+
         <action
             android:id="@+id/action_MenuFragment_to_LoginFragment"
             app:destination="@id/LoginFragment" />
+
+        <action
+            android:id="@+id/action_MenuFragment_to_FirstFragment"
+            app:destination="@id/FirstFragment" />
     </fragment>
 
     <fragment

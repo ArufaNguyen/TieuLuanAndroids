@@ -30,3 +30,9 @@ if (backendDir.exists()) {
     include(":backend")
     project(":backend").projectDir = backendDir
 }
+
+val tunnelPublisherDir = file("tunnel-url-publisher")
+if (tunnelPublisherDir.exists()) {
+    include(":tunnel-url-publisher")
+    project(":tunnel-url-publisher").projectDir = tunnelPublisherDir
+}
