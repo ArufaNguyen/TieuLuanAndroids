@@ -33,6 +33,19 @@ class AgentChatService(
     private val zone = ZoneId.of("Asia/Ho_Chi_Minh")
 
     fun chat(sessionToken: String?, message: String, selectedToolId: Int? = null, confirmed: Boolean = false): AgentChatResponse {
+        return chatInternal(sessionToken, message, selectedToolId, confirmed)
+    }
+
+    fun chatV2(sessionToken: String?, message: String, confirmed: Boolean = false): AgentChatResponse {
+        return chatInternal(sessionToken, message, selectedToolId = null, confirmed = confirmed)
+    }
+
+    private fun chatInternal(
+        sessionToken: String?,
+        message: String,
+        selectedToolId: Int?,
+        confirmed: Boolean
+    ): AgentChatResponse {
         if (message.isBlank()) throw ApiException(400, "message must not be blank")
         val session = authService.getValidSession(sessionToken)
             ?: throw ApiException(401, "valid session is required for agent chat")

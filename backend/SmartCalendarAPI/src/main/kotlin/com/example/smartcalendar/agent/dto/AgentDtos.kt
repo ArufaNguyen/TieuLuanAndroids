@@ -8,6 +8,11 @@ data class AgentChatRequest(
     val confirmed: Boolean = false
 )
 
+data class AgentChatV2Request(
+    val message: String,
+    val confirmed: Boolean = false
+)
+
 data class AgentChatResponse(
     val answer: String,
     val toolCalls: List<AgentToolCallView> = emptyList(),
