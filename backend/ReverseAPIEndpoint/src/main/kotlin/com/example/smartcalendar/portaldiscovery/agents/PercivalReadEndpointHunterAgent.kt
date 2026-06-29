@@ -16,7 +16,7 @@ data class PercivalCandidate(
 class PercivalReadEndpointHunterAgent(private val router: AgentLlmRouter, private val json: ObjectMapper) {
     suspend fun hunt(endpoint: Endpoint, signal: SignalResult, classification: EndpointClassification): PercivalCandidate {
         val raw = router.percival(
-            """{"isReadCandidate":true,"category":"SCHEDULE|REGISTERED_COURSES|AVAILABLE_COURSES|RETAKE_COURSES|NOTIFICATION|SEMESTER|DANGEROUS_WRITE|OTHER","confidence":0.0,"evidence":[],"missingEvidence":[]}""",
+            """{"isReadCandidate":true,"category":"LOGIN|SCHEDULE|REGISTERED_COURSES|AVAILABLE_COURSES|RETAKE_COURSES|NOTIFICATION|SEMESTER|DANGEROUS_WRITE|OTHER","confidence":0.0,"evidence":[],"missingEvidence":[]}""",
             """{"endpoint":${endpoint.snapshot(json)},"heuristic":${json.writeValueAsString(signal)},"classification":${classification.rawJson}}""",
         )
         val node = json.readTree(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1))
@@ -31,6 +31,7 @@ class PercivalReadEndpointHunterAgent(private val router: AgentLlmRouter, privat
 
     private companion object {
         val READ_CATEGORIES = setOf(
+            EndpointCategory.LOGIN,
             EndpointCategory.SCHEDULE,
             EndpointCategory.REGISTERED_COURSES,
             EndpointCategory.AVAILABLE_COURSES,

@@ -23,6 +23,6 @@ class GawainSafetyAgent {
             "delete", "remove", "drop", "cancel", "register", "enroll", "update", "save", "submit",
             "dangky", "dang-ky", "xoa", "huy", "capnhat", "cap-nhat",
         )
-        val CONDITIONAL_POST = setOf("search", "query", "filter")
+        val CONDITIONAL_POST = setOf("search", "query", "filter", "login", "signin", "sign-in", "token")
     }
 }

@@ -12,7 +12,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${JPA_DDL_AUTO:none}
 
     show-sql: true
     open-in-view: false
@@ -29,3 +29,12 @@ app:
   dev-mode: ${DEV_MODE:false}
   reverse-api:
     max-file-size: ${HAR_MAX_FILE_SIZE:30MB}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev-migrate
+  jpa:
+    hibernate:
+      ddl-auto: update

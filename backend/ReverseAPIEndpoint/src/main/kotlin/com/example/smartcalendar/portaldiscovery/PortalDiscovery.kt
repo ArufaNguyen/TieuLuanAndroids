@@ -272,9 +272,12 @@ class PortalDiscoveryFunction(
         if (!method.equals("POST", true)) return false
         if (!url.contains("login", ignoreCase = true)) return false
         return request.manualApprovedEndpointIds.any { approved ->
-            approved.equals(id, ignoreCase = true) ||
-                approved.equals("login", ignoreCase = true) ||
-                id.contains(approved, ignoreCase = true)
+            val normalized = approved.trim()
+            normalized.equals(id, ignoreCase = true) ||
+                normalized.equals("login", ignoreCase = true) ||
+                normalized.equals("POST login", ignoreCase = true) ||
+                normalized.equals("POST /login", ignoreCase = true) ||
+                id.contains(normalized, ignoreCase = true)
         }
     }
 

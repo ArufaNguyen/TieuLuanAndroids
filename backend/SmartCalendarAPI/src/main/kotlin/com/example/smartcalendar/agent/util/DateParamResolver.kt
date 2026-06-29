@@ -35,8 +35,20 @@ class DateParamResolver {
             val second = hits[1].date
             return if (first <= second) first to second else second to first
         }
+        if (hits.size == 1) {
+            return hits[0].date to hits[0].date
+        }
         val text = normalize(message)
         return when {
+            "hom nay" in text -> currentDate to currentDate
+            "ngay mai" in text || text.containsWord("mai") -> {
+                val date = currentDate.plusDays(1)
+                date to date
+            }
+            "hom qua" in text -> {
+                val date = currentDate.minusDays(1)
+                date to date
+            }
             "tuan nay" in text -> {
                 val start = currentDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 start to start.plusDays(6)

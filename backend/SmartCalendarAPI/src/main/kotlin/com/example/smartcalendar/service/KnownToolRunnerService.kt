@@ -63,7 +63,7 @@ class KnownToolRunnerService(
         }
 
         val url = fillUrl(knowledge.urlTemplate, request.params)
-        val headers = buildHeaders(knowledge, request)
+        val headers = buildHeaders(knowledge, request, url)
         val outbound = buildHttpRequest(knowledge.method, url, headers, request.body)
         val response = client.send(outbound, HttpResponse.BodyHandlers.ofString())
         val contentType = response.headers().firstValue("content-type").orElse(null)
@@ -98,7 +98,7 @@ class KnownToolRunnerService(
         return url
     }
 
-    private fun buildHeaders(knowledge: ApiKnowledge, request: RunKnownToolRequest): Map<String, String> {
+    private fun buildHeaders(knowledge: ApiKnowledge, request: RunKnownToolRequest, url: String): Map<String, String> {
         val provided = request.credentials + request.headers
         val requiredNames = (
             knowledge.headersPolicy.requiredCredentialHeaders +
@@ -107,7 +107,7 @@ class KnownToolRunnerService(
 
         val requiredHeaders = requiredNames.associateWith { name ->
             provided.findHeader(name)
-                ?: defaultStaticHeader(name, knowledge.urlTemplate)
+                ?: defaultStaticHeader(name, url)
                 ?: throw ApiException(400, "missing required header credential: $name")
         }.filterKeys(::isAllowedOutboundHeader)
 
