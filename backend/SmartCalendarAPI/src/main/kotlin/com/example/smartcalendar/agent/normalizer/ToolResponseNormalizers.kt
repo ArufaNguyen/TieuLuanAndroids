@@ -11,7 +11,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.Duration
 
 interface ToolResponseNormalizer {
     fun supports(category: String): Boolean
@@ -34,7 +33,6 @@ class ScheduleNormalizer(
     private val json: ObjectMapper
 ) : ToolResponseNormalizer {
     private val client = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
         .version(HttpClient.Version.HTTP_1_1)
         .build()
 
@@ -79,7 +77,6 @@ class ScheduleNormalizer(
 
         return runCatching {
             val request = HttpRequest.newBuilder(URI("${apiBase()}/chat/completions"))
-                .timeout(Duration.ofSeconds(45))
                 .headers(*headers.flatMap { listOf(it.key, it.value) }.toTypedArray())
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build()

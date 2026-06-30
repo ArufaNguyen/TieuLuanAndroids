@@ -140,6 +140,11 @@ class LlmPlanner(
             listOf("da dang ky", "dang ky mon nao", "lhp da dang ky").any(text::contains) -> "REGISTERED_COURSES"
             listOf("cai thien", "hoc lai", "retake").any(text::contains) -> "RETAKE_COURSES"
             listOf("login", "dang nhap").any(text::contains) -> "LOGIN"
+            listOf("them event", "tao event", "them lich", "tao lich", "schedule event", "create event", "add event").any(text::contains) -> "EVENT_WRITE"
+            listOf("xoa event", "xoa lich", "huy lich", "delete event", "remove event", "cancel event").any(text::contains) -> "EVENT_DELETE"
+            listOf("them tag", "tao tag", "create tag", "add tag").any(text::contains) -> "TAG_WRITE"
+            listOf("sua tag", "doi ten tag", "cap nhat tag", "update tag", "rename tag").any(text::contains) -> "TAG_UPDATE"
+            listOf("xoa tag", "delete tag", "remove tag").any(text::contains) -> "TAG_DELETE"
             else -> null
         }
     }
@@ -180,6 +185,13 @@ class LlmPlanner(
                 lower == "categoryid" || lower.contains("category") -> params.resolveCategoryId(message)
                 lower == "page" -> params.resolvePage(message) ?: "1"
                 lower == "size" -> params.resolveSize(message) ?: "10"
+                lower == "title" -> explicitTextFor(name, message) ?: inferEventTitle(message)
+                lower == "starttime" -> explicitDateTimeFor(name, message)
+                lower == "endtime" -> explicitDateTimeFor(name, message)
+                lower == "eventid" -> explicitNumberFor(name, message) ?: explicitNumberFor("id", message)
+                lower == "tagid" -> explicitNumberFor(name, message) ?: explicitNumberFor("id", message)
+                lower == "name" -> explicitTextFor(name, message) ?: inferTagNameParam(message)
+                lower == "color" -> explicitColorFor(message)
                 lower.contains("recaptcha") -> null
                 else -> explicitNumberFor(name, message)
             }
@@ -193,6 +205,52 @@ class LlmPlanner(
             .find(message)
             ?.groupValues
             ?.get(1)
+
+    private fun explicitTextFor(name: String, message: String): String? =
+        Regex("""${Regex.escape(name)}\s*[=:]\s*(.+?)(?=\s+(startTime|endTime|tagId|tagName|description)\s*[=:]|[,;\n]|$)""", RegexOption.IGNORE_CASE)
+            .find(message)
+            ?.groupValues
+            ?.get(1)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+
+    private fun explicitDateTimeFor(name: String, message: String): String? =
+        Regex("""${Regex.escape(name)}\s*[=:]\s*([0-9T:\-\s]+)""", RegexOption.IGNORE_CASE)
+            .find(message)
+            ?.groupValues
+            ?.get(1)
+            ?.trim()
+            ?.replace(' ', 'T')
+            ?.takeIf { it.isNotBlank() }
+
+    private fun explicitColorFor(message: String): String? =
+        Regex("""(?i)\bcolor\s*[=:]?\s*(#[0-9a-f]{6}|#[0-9a-f]{3})""")
+            .find(message)
+            ?.groupValues
+            ?.get(1)
+
+    private fun inferTagNameParam(message: String): String? {
+        val withoutPrefix = message
+            .replace(Regex("""(?i)\b(thêm|them|tạo|tao|create|add|sửa|sua|đổi tên|doi ten|cập nhật|cap nhat|update|rename)\b"""), "")
+            .replace(Regex("""(?i)\b(tag|nhãn|nhan)\b"""), "")
+            .replace(Regex("""(?i)\b(color|màu|mau|id|tagId)\b.*$"""), "")
+            .trim()
+            .trim('-', ':')
+        return withoutPrefix.takeIf { it.isNotBlank() }?.take(80)
+    }
+
+    private fun inferEventTitle(message: String): String? {
+        val normalized = normalize(message)
+        if (!listOf("them", "tao", "add", "create", "schedule").any(normalized::contains)) return null
+        return message
+            .replace(Regex("""(?i)\b(thêm|them|tạo|tao|add|create|schedule)\b"""), "")
+            .replace(Regex("""(?i)\b(event|lịch|lich)\b"""), "")
+            .replace(Regex("""(?i)\b(from|to|từ|tu|đến|den|startTime|endTime)\b.*$"""), "")
+            .trim()
+            .trim('-', ':')
+            .takeIf { it.isNotBlank() }
+            ?.take(80)
+    }
 
     private fun defaultHeaders(tool: AgentToolDescriptor): Map<String, String> {
         val required = tool.optionalCredentialHeaders.toSet()

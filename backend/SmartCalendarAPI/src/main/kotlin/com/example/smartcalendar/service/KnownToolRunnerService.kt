@@ -15,7 +15,6 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
-import java.time.Duration
 
 @Service
 class KnownToolRunnerService(
@@ -24,7 +23,6 @@ class KnownToolRunnerService(
     private val json: ObjectMapper
 ) {
     private val client = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(15))
         .followRedirects(HttpClient.Redirect.NORMAL)
         .build()
 
@@ -125,7 +123,7 @@ class KnownToolRunnerService(
         headers: Map<String, String>,
         body: JsonNode?
     ): HttpRequest {
-        val builder = HttpRequest.newBuilder(URI(url)).timeout(Duration.ofSeconds(90))
+        val builder = HttpRequest.newBuilder(URI(url))
         headers.forEach { (name, value) -> builder.header(name, value) }
         return when (method.uppercase()) {
             "GET" -> builder.GET().build()

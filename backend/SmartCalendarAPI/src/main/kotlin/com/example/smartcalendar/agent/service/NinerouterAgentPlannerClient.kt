@@ -8,7 +8,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.Duration
 
 data class NinerouterPlanResult(
     val action: String?,
@@ -28,7 +27,6 @@ class NinerouterAgentPlannerClient(
 ) {
     private val log = LoggerFactory.getLogger(NinerouterAgentPlannerClient::class.java)
     private val client = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
         .version(HttpClient.Version.HTTP_1_1)
         .build()
 
@@ -55,7 +53,6 @@ class NinerouterAgentPlannerClient(
 
         return runCatching {
             val request = HttpRequest.newBuilder(URI("${apiBase()}/chat/completions"))
-                .timeout(Duration.ofSeconds(45))
                 .headers(*headers.flatMap { listOf(it.key, it.value) }.toTypedArray())
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
@@ -95,6 +92,24 @@ class NinerouterAgentPlannerClient(
         Only select a tool from the provided tool list. Never invent URLs or tool names.
         For READ_ONLY tools, use RUN_TOOL when required params can be resolved.
         For LOGIN or USER_CONFIRM_REQUIRED tools, use NEED_CONFIRMATION.
+        For the internal create_event tool, return:
+        - toolName=create_event
+        - category=EVENT_WRITE
+        - params.title as a short event title
+        - params.startTime and params.endTime as ISO-8601 local datetimes, for example 2026-07-01T08:00:00.
+        - params.tagId or params.tagName when the message clearly matches one of the available tags in the tool description.
+        Do not include datetime, parameter names, or tag metadata inside params.title.
+        If the user asks to add/create/schedule an event but does not provide enough date or time details, use NEED_CLARIFICATION.
+        For the internal delete_event tool, return:
+        - toolName=delete_event
+        - category=EVENT_DELETE
+        - params.eventId from the available events in the tool description.
+        If the user asks to delete/remove/cancel an event but the matching event is ambiguous, use NEED_CLARIFICATION and ask which event id to delete.
+        For internal tag tools:
+        - create_tag uses category=TAG_WRITE and params.name, optional params.color as a CSS hex color.
+        - update_tag uses category=TAG_UPDATE and params.tagId from the available tags, plus params.name and/or params.color.
+        - delete_tag uses category=TAG_DELETE and params.tagId from the available tags.
+        If the user asks to update/delete a tag and the matching tag is ambiguous, use NEED_CLARIFICATION.
         Resolve relative dates using currentDate and timezone.
         If required params are missing, use NEED_CLARIFICATION.
     """.trimIndent()
@@ -112,10 +127,13 @@ class NinerouterAgentPlannerClient(
                 "category" to it.category,
                 "method" to it.method,
                 "urlTemplate" to it.urlTemplate,
+                "description" to it.description,
                 "requiredParams" to it.requiredParams,
+                "optionalParams" to it.optionalParams,
                 "bodySchema" to it.bodySchema,
                 "safetyLevel" to it.safetyLevel,
-                "readOnly" to it.readOnly
+                "readOnly" to it.readOnly,
+                "examples" to it.examples
             )
         }
         return json.writeValueAsString(
