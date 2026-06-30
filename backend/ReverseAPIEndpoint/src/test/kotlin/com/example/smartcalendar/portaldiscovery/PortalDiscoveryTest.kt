@@ -250,6 +250,49 @@ class PortalDiscoveryTest {
     }
 
     @Test
+    fun `signals detect portal login APIs`() {
+        val signals = ScheduleSignalAgent()
+        val login = Endpoint(
+            "login",
+            "POST",
+            "https://portal.ut.edu.vn/api/v1/user/login?g-recaptcha-response={g-recaptcha-response}",
+            CapturedExchange(
+                "POST",
+                "https://portal.ut.edu.vn/api/v1/user/login?g-recaptcha-response=token",
+                requestBody = """{"username":"u","password":"p"}""",
+                responseBody = """{"access_token":"token","token_type":"Bearer"}""",
+            ),
+        )
+
+        val signal = signals.detect(login)
+
+        assertTrue(signal.candidate)
+        assertEquals(EndpointCategory.LOGIN, signal.suggestedCategory)
+    }
+
+    @Test
+    fun `manual POST login approval creates login tool`() = runBlocking {
+        val result = runDiscovery(
+            DiscoveryRequest(
+                capturedExchanges = listOf(
+                    CapturedExchange(
+                        "POST",
+                        "https://portal.ut.edu.vn/api/v1/user/login?g-recaptcha-response=token",
+                        requestBody = """{"username":"u","password":"p"}""",
+                        responseStatus = 200,
+                        responseBody = """{"access_token":"token","token_type":"Bearer"}""",
+                    ),
+                ),
+                manualApprovedEndpointIds = setOf("POST login"),
+            ),
+        )
+
+        assertEquals(DiscoveryStatus.TOOL_CREATED, result.status)
+        assertEquals(EndpointCategory.LOGIN, result.primaryTool?.category)
+        assertEquals("APPROVE", result.trace.candidates.single().arthurDecision)
+    }
+
+    @Test
     fun `unrelated endpoint signal remains other`() {
         val endpoint = Endpoint(
             "profile",
@@ -490,8 +533,6 @@ class PortalDiscoveryTest {
         }
         val router = AgentLlmRouter(
             PortalDiscoveryConfig(
-                nineRouterDefaultCombo = "openrouter-combo",
-                nineRouterCodeCombo = "opencode-combo",
                 nineRouterPalamedesModel = "palamedes-model",
                 nineRouterPercivalModel = "percival-model",
                 nineRouterKayModel = "kay-model",

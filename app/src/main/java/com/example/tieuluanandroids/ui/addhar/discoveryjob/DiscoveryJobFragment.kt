@@ -5,99 +5,85 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.example.tieuluanandroids.R
 import com.example.tieuluanandroids.SmartCalendarApplication
-import com.example.tieuluanandroids.data.model.DiscoveryJob
-import com.example.tieuluanandroids.databinding.DiscoveryJobLayoutBinding
-import com.example.tieuluanandroids.ui.ViewModelFactory
+import com.example.tieuluanandroids.model.AppResult
+import com.example.tieuluanandroids.model.DiscoveryJob
+import com.example.tieuluanandroids.model.service.SmartCalendarData
 import kotlinx.coroutines.launch
 
 class DiscoveryJobFragment : Fragment() {
 
-    private var _binding: DiscoveryJobLayoutBinding? = null
-    private val binding get() = _binding!!
-
-    private val viewModel: DiscoveryJobViewModel by viewModels {
-        ViewModelFactory {
-            DiscoveryJobViewModel(
-                (requireActivity().application as SmartCalendarApplication)
-                    .repository
-            )
-        }
-    }
+    private lateinit var buttonRefreshEvents: Button
+    private lateinit var textEventState: TextView
+    private lateinit var tableEvents: TableLayout
+    private val data: SmartCalendarData
+        get() = (requireActivity().application as SmartCalendarApplication).data
+    private var isLoading = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = DiscoveryJobLayoutBinding.inflate(
-            inflater,
-            container,
-            false
-        )
-
-        return binding.root
+        return inflater.inflate(R.layout.discovery_job_layout, container, false)
     }
 
-    override fun onViewCreated(
-        view: View,
-        savedInstanceState: Bundle?
-    ) {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.buttonRefreshEvents.setOnClickListener {
-            viewModel.refresh()
-        }
+        buttonRefreshEvents = view.findViewById(R.id.button_refresh_events)
+        textEventState = view.findViewById(R.id.text_event_state)
+        tableEvents = view.findViewById(R.id.table_events)
 
+        buttonRefreshEvents.setOnClickListener { refresh() }
         renderHeader(showOwner = false)
-        observeViewModel()
+        refresh()
     }
 
-    private fun observeViewModel() {
+    private fun refresh() {
+        if (isLoading) return
+
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(
-                Lifecycle.State.STARTED
-            ) {
-                viewModel.uiState.collect(::render)
+            setLoading(true)
+            when (val result = data.getDiscoveryJobs()) {
+                is AppResult.Success -> render(jobs = result.data, message = null)
+                is AppResult.Error -> render(jobs = emptyList(), message = result.message)
             }
+            setLoading(false)
         }
     }
 
-    private fun render(state: DiscoveryJobUiState) {
-        binding.buttonRefreshEvents.isEnabled =
-            !state.isLoading
+    private fun setLoading(loading: Boolean) {
+        isLoading = loading
+        buttonRefreshEvents.isEnabled = !loading
+        if (loading) {
+            render(jobs = emptyList(), message = null, isLoading = true)
+        }
+    }
 
-        binding.textEventState.text = when {
-            state.isLoading ->
-                "Đang tải Discovery Jobs..."
-
-            state.message != null ->
-                state.message
-
-            state.jobs.isEmpty() ->
-                "Không có Discovery Job"
-
-            else ->
-                "Có ${state.jobs.size} Discovery Job"
+    private fun render(
+        jobs: List<DiscoveryJob>,
+        message: String?,
+        isLoading: Boolean = false
+    ) {
+        val showOwner = data.isDevMode
+        renderHeader(showOwner)
+        textEventState.text = when {
+            isLoading -> "Dang tai Discovery Jobs..."
+            message != null -> message
+            jobs.isEmpty() -> "Khong co Discovery Job"
+            else -> "Co ${jobs.size} Discovery Job"
         }
 
-        renderHeader(state.showOwner)
-
-        state.jobs.forEach { job ->
-            binding.tableEvents.addView(
-                createJobRow(
-                    job = job,
-                    showOwner = state.showOwner
-                )
-            )
+        jobs.forEach { job ->
+            tableEvents.addView(createJobRow(job, showOwner))
         }
     }
 
@@ -114,17 +100,14 @@ class DiscoveryJobFragment : Fragment() {
             addView(cell(job.completedAt ?: "-"))
 
             if (showOwner) {
-                addView(
-                    cell(job.userId?.toString() ?: "-")
-                )
+                addView(cell(job.userId?.toString() ?: "-"))
             }
         }
     }
 
     private fun renderHeader(showOwner: Boolean) {
-        binding.tableEvents.removeAllViews()
-
-        binding.tableEvents.addView(
+        tableEvents.removeAllViews()
+        tableEvents.addView(
             TableRow(requireContext()).apply {
                 addView(headerCell("ID"))
                 addView(headerCell("File"))
@@ -147,22 +130,12 @@ class DiscoveryJobFragment : Fragment() {
     }
 
     private fun cell(text: String): TextView {
-        val padding = resources.getDimensionPixelSize(
-            R.dimen.event_table_cell_padding
-        )
-
+        val padding = resources.getDimensionPixelSize(R.dimen.event_table_cell_padding)
         return TextView(requireContext()).apply {
             this.text = text
             setPadding(padding, padding, padding, padding)
-
-            minWidth = resources.getDimensionPixelSize(
-                R.dimen.event_table_cell_min_width
-            )
+            minWidth = resources.getDimensionPixelSize(R.dimen.event_table_cell_min_width)
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
 }

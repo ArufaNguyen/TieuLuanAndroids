@@ -7,17 +7,15 @@ import android.provider.OpenableColumns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.tieuluanandroids.R
 import com.example.tieuluanandroids.SmartCalendarApplication
-import com.example.tieuluanandroids.databinding.AddHarFileBinding
-import com.example.tieuluanandroids.ui.ViewModelFactory
+import com.example.tieuluanandroids.model.service.SmartCalendarData
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,15 +23,12 @@ import kotlinx.coroutines.withContext
 
 class AddHarFileFragment : Fragment() {
 
-    private var _binding: AddHarFileBinding? = null
-    private val binding get() = _binding!!
-    private val viewModel: AddHarFileViewModel by viewModels {
-        ViewModelFactory {
-            AddHarFileViewModel(
-                (requireActivity().application as SmartCalendarApplication).repository
-            )
-        }
-    }
+    private lateinit var buttonSelectFile: Button
+    private lateinit var buttonDiscoveryJob: Button
+    private lateinit var textFileStatus: TextView
+    private val data: SmartCalendarData
+        get() = (requireActivity().application as SmartCalendarApplication).data
+    private var isUploading = false
 
     private val selectFile = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -46,22 +41,24 @@ class AddHarFileFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = AddHarFileBinding.inflate(inflater, container, false)
-        return binding.root
+        return inflater.inflate(R.layout.add_har_file, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.buttonSelectFile.setOnClickListener {
+        buttonSelectFile = view.findViewById(R.id.button_select_file)
+        buttonDiscoveryJob = view.findViewById(R.id.button_discovery_job)
+        textFileStatus = view.findViewById(R.id.text_file_status)
+
+        buttonSelectFile.setOnClickListener {
             selectFile.launch(arrayOf("*/*"))
         }
-        binding.buttonDiscoveryJob.setOnClickListener {
+        buttonDiscoveryJob.setOnClickListener {
             findNavController().navigate(
                 R.id.action_addHarFileFragment_to_discoveryJobsFragment
             )
         }
-        observeViewModel()
     }
 
     private fun upload(uri: Uri) {
@@ -77,30 +74,35 @@ class AddHarFileFragment : Fragment() {
             }
 
             selectedFile.onSuccess { (fileName, bytes) ->
-                viewModel.upload(fileName, bytes)
+                upload(fileName, bytes)
             }.onFailure { error ->
-                viewModel.reportReadError(error.message ?: "Cannot read selected file")
+                showUploadStatus(UploadStatus.ERROR)
+                Snackbar.make(
+                    requireView(),
+                    error.message ?: "Cannot read selected file",
+                    Snackbar.LENGTH_LONG
+                ).show()
             }
         }
     }
 
-    private fun observeViewModel() {
+    private fun upload(fileName: String, bytes: ByteArray) {
+        if (isUploading) return
+
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch { viewModel.uiState.collect(::render) }
-                launch {
-                    viewModel.messages.collect { message ->
-                        Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
-                    }
-                }
-            }
+            isUploading = true
+            showUploadStatus(UploadStatus.UPLOADING)
+            val result = data.uploadHar(fileName, bytes)
+            showUploadStatus(if (result.success) UploadStatus.SUCCESS else UploadStatus.ERROR)
+            Snackbar.make(requireView(), result.message, Snackbar.LENGTH_LONG).show()
+            isUploading = false
         }
     }
 
-    private fun render(state: AddHarFileUiState) {
-        binding.buttonSelectFile.isEnabled = state.status != UploadStatus.UPLOADING
-        binding.textFileStatus.setText(
-            when (state.status) {
+    private fun showUploadStatus(status: UploadStatus) {
+        buttonSelectFile.isEnabled = status != UploadStatus.UPLOADING
+        textFileStatus.setText(
+            when (status) {
                 UploadStatus.IDLE -> R.string.no_file_added
                 UploadStatus.UPLOADING -> R.string.uploading_har_file
                 UploadStatus.SUCCESS -> R.string.added_file
@@ -115,8 +117,6 @@ class AddHarFileFragment : Fragment() {
         return if (index >= 0) cursor.getString(index) else "capture.har"
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
 }
+
+private enum class UploadStatus { IDLE, UPLOADING, SUCCESS, ERROR }

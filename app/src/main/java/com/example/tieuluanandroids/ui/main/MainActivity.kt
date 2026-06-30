@@ -3,6 +3,7 @@ package com.example.tieuluanandroids.ui.main
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -14,27 +15,36 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.example.tieuluanandroids.R
-import com.example.tieuluanandroids.databinding.ActivityMainBinding
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var binding: ActivityMainBinding
+    private lateinit var main: View
+    private lateinit var appBar: AppBarLayout
+    private lateinit var toolbar: MaterialToolbar
+    private lateinit var fab: FloatingActionButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_main)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { view, insets ->
+        main = findViewById(R.id.main)
+        appBar = findViewById(R.id.app_bar)
+        toolbar = findViewById(R.id.toolbar)
+        fab = findViewById(R.id.fab)
+
+        ViewCompat.setOnApplyWindowInsetsListener(main) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-        setSupportActionBar(binding.toolbar)
+        setSupportActionBar(toolbar)
 
         val navHostFragment = supportFragmentManager.findFragmentById(
             R.id.nav_host_fragment_content_main
@@ -45,10 +55,10 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            binding.appBar.isVisible = destination.id != R.id.MenuFragment
+            appBar.isVisible = destination.id != R.id.MenuFragment
         }
 
-        binding.fab.setOnClickListener { view ->
+        fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
                 .setAnchorView(R.id.fab)

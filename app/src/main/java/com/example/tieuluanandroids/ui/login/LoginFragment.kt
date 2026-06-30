@@ -4,91 +4,101 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.tieuluanandroids.R
 import com.example.tieuluanandroids.SmartCalendarApplication
-import com.example.tieuluanandroids.databinding.FragmentLoginBinding
-import com.example.tieuluanandroids.ui.ViewModelFactory
+import com.example.tieuluanandroids.model.service.SmartCalendarData
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
 class LoginFragment : Fragment() {
 
-    private var _binding: FragmentLoginBinding? = null
-    private val binding get() = _binding!!
-    private val viewModel: LoginViewModel by viewModels {
-        ViewModelFactory {
-            LoginViewModel((requireActivity().application as SmartCalendarApplication).repository)
-        }
-    }
+    private lateinit var buttonLogin: Button
+    private lateinit var buttonDevSkip: Button
+    private lateinit var editTextUsername: TextInputEditText
+    private lateinit var editTextPassword: TextInputEditText
+    private val data: SmartCalendarData
+        get() = (requireActivity().application as SmartCalendarApplication).data
+    private var isLoading = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentLoginBinding.inflate(inflater, container, false)
-        return binding.root
+        return inflater.inflate(R.layout.fragment_login, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.buttonLogin.setOnClickListener {
-            val username = binding.editTextUsername.text?.toString()?.trim().orEmpty()
-            val password = binding.editTextPassword.text?.toString()?.trim().orEmpty()
-            viewModel.login(username, password)
+        buttonLogin = view.findViewById(R.id.button_login)
+        buttonDevSkip = view.findViewById(R.id.button_dev_skip)
+        editTextUsername = view.findViewById(R.id.edit_text_username)
+        editTextPassword = view.findViewById(R.id.edit_text_password)
+
+        buttonLogin.setOnClickListener {
+            val username = editTextUsername.text?.toString()?.trim().orEmpty()
+            val password = editTextPassword.text?.toString()?.trim().orEmpty()
+            login(username, password)
         }
-        binding.buttonDevSkip.setOnClickListener {
-            viewModel.continueInDevMode()
+        buttonDevSkip.setOnClickListener {
+            continueInDevMode()
         }
-        observeViewModel()
     }
 
-    private fun observeViewModel() {
+    private fun login(username: String, password: String) {
+        if (username.isBlank() || password.isBlank()) {
+            showMessage(getString(R.string.login_missing_fields), Snackbar.LENGTH_SHORT)
+            return
+        }
+        if (isLoading) return
+
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch { viewModel.uiState.collect(::render) }
-                launch { viewModel.events.collect(::handleEvent) }
+            setLoading(true)
+            val result = data.login(username, password)
+            setLoading(false)
+            showMessage(result.message, Snackbar.LENGTH_LONG)
+            if (result.success) {
+                findNavController().navigate(R.id.action_LoginFragment_to_EventsFragment)
             }
         }
     }
 
-    private fun render(state: LoginUiState) {
-        binding.buttonLogin.isEnabled = !state.isLoading
-        binding.buttonDevSkip.isEnabled = !state.isLoading
-        binding.editTextUsername.isEnabled = !state.isLoading
-        binding.editTextPassword.isEnabled = !state.isLoading
-        binding.buttonLogin.setText(
-            if (state.isLoading) R.string.login_loading else R.string.login_button
-        )
-    }
+    private fun continueInDevMode() {
+        if (isLoading) return
 
-    private fun handleEvent(event: LoginEvent) {
-        when (event) {
-            LoginEvent.MissingFields -> Snackbar.make(
-                binding.root,
-                R.string.login_missing_fields,
-                Snackbar.LENGTH_SHORT
-            ).show()
-            is LoginEvent.ShowMessage -> Snackbar.make(
-                binding.root,
-                event.message,
-                Snackbar.LENGTH_LONG
-            ).show()
-            LoginEvent.NavigateToEvents -> findNavController().navigate(
-                R.id.action_LoginFragment_to_EventsFragment
-            )
+        viewLifecycleOwner.lifecycleScope.launch {
+            setLoading(true)
+            val result = data.checkBackendDevMode()
+            if (result.success) {
+                data.enableDevMode()
+            }
+            setLoading(false)
+            if (result.success) {
+                findNavController().navigate(R.id.action_LoginFragment_to_EventsFragment)
+            } else {
+                showMessage(result.message, Snackbar.LENGTH_LONG)
+            }
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    private fun setLoading(loading: Boolean) {
+        isLoading = loading
+        buttonLogin.isEnabled = !loading
+        buttonDevSkip.isEnabled = !loading
+        editTextUsername.isEnabled = !loading
+        editTextPassword.isEnabled = !loading
+        buttonLogin.setText(
+            if (loading) R.string.login_loading else R.string.login_button
+        )
+    }
+
+    private fun showMessage(message: String, duration: Int) {
+        Snackbar.make(requireView(), message, duration).show()
     }
 }

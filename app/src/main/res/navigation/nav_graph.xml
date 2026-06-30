@@ -7,9 +7,14 @@
 
     <fragment
         android:id="@+id/MenuFragment"
-        android:name="com.example.tieuluanandroids.View_Calendar_Fragment"
+        android:name="com.example.tieuluanandroids.ui.menu.MenuFragment"
         android:label="@string/view_fragment_label"
-        tools:layout="@layout/fragment_calendar_view">
+        tools:layout="@layout/menu_buttons">
+
+        <action
+            android:id="@+id/action_MenuFragment_to_CalendarFragment"
+            app:destination="@+id/CalendarFragment"
+            />
 
         <action
             android:id="@+id/action_MenuFragment_to_LoginFragment"
@@ -34,6 +39,14 @@
         android:name="com.example.tieuluanandroids.ui.session.SessionFragment"
         android:label="Session"
         tools:layout="@layout/session_layout" />
+
+
+    <fragment
+        android:id="@+id/CalendarFragment"
+        android:name="com.example.tieuluanandroids.ui.calendar.CalendarFragment"
+        android:label="Calendar"
+        tools:layout="@layout/fragment_calendar_view"
+    />
 
     <fragment
         android:id="@+id/DiscoveryJobFragment"
