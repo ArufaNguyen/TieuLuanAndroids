@@ -20,7 +20,7 @@ class View_Calendar_Fragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Nạp file XML man_hinh_chinh.xml (giao diện lịch của bạn) lên
+        // Nạp file XML man_hinh_chinh.xml
         return inflater.inflate(R.layout.fragment_calendar_view, container, false)
     }
 
@@ -30,35 +30,41 @@ class View_Calendar_Fragment : Fragment() {
         // Tự động quét 24 tiếng x 7 ngày để gắn sự kiện mở Popup
         duyetQuaCacCotNgay(view)
 
-        // Tính năng kéo trượt đồng bộ Thứ và Ô của Thắng
         val scrollHeader = view.findViewById<HorizontalScrollView>(R.id.scroll_header)
         val scrollBody = view.findViewById<HorizontalScrollView>(R.id.scroll_body)
         scrollBody.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             scrollHeader.scrollTo(scrollX, 0)
         }
 
-        // 🔥 THÊM ĐOẠN NÀY: Bộ bắt sóng tự động vẽ chữ lên ô lịch
         parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
-            val thu = bundle.getString("TRA_VE_THU") ?: ""         // Ví dụ: "Monday"
-            val gio = bundle.getString("TRA_VE_GIO") ?: ""         // Ví dụ: "1 AM" hoặc "12 PM"
-            val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: "" //
+            val thu = bundle.getString("TRA_VE_THU") ?: ""
+            val gioBatDau = bundle.getString("TRA_VE_TIME_START") ?: ""
+            val gioKetThuc = bundle.getString("TRA_VE_TIME_END") ?: ""
+            val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: ""
 
-            // Chuẩn hóa chuỗi chữ để ráp thành ID tương thích XML (Ví dụ: "Monday" -> "monday", "1 AM" -> "1AM")
             val thuClean = thu.lowercase()
-            val gioClean = gio.replace(" ", "") // Xóa khoảng trắng để tạo chữ "1AM", "12PM"
+            var gioClean = gioBatDau.replace(" ", "")
+            if (gioClean.contains(":")) {
+                try {
+                    val parts = gioClean.split(":")
+                    val hour = parts[0].toInt()
+                    val amPm = if (hour < 12) "AM" else "PM"
+                    val hour12 = if (hour % 12 == 0) 12 else hour % 12
 
-            // Tự động ghép chuỗi thành ID, ví dụ: "col_monday_1AM"
+                    gioClean = "$hour12$amPm"
+                } catch (e: Exception) {
+                    gioClean = gioClean.replace(":", "")
+                }
+            }
+
             val idString = "col_${thuClean}_$gioClean"
 
-            // Biến chuỗi chữ thành ID hệ thống thật sự R.id
             val cellId = resources.getIdentifier(idString, "id", requireContext().packageName)
 
-            // Nếu dò trúng ô FrameLayout đó trên giao diện, nạp chữ màu xanh lá vào luôn!
             if (cellId != 0) {
                 val cell = view.findViewById<FrameLayout>(cellId)
                 if (cell != null) {
-                    // Gọi hàm vẽ cục màu xanh lá cây hiển thị nội dung của bạn
-                    addEventToCell(cell, noiDung, thu, gio)
+                    addEventToCell(cell, noiDung, thu, gioBatDau, gioKetThuc)
                 }
             }
         }
@@ -70,11 +76,9 @@ class View_Calendar_Fragment : Fragment() {
      * và từng ô thời gian trong mỗi cột
      */
     private fun duyetQuaCacCotNgay(view: View) {
-        // Lấy layout chứa các cột ngày (layout_weekly_grid)
         val weeklyGrid = view.findViewById<LinearLayout>(R.id.layout_weekly_grid)
 
         if (weeklyGrid != null) {
-            // Danh sách các cột ngày theo thứ tự
             val columns = listOf(
                 R.id.col_monday to "Monday",
                 R.id.col_tuesday to "Tuesday",
@@ -85,11 +89,9 @@ class View_Calendar_Fragment : Fragment() {
                 R.id.col_sunday to "Sunday"
             )
 
-            // Lấy cột thời gian để biết mốc giờ
             val timeAxis = view.findViewById<LinearLayout>(R.id.layout_time_axis)
             val timeTexts = mutableListOf<String>()
 
-            // Lấy tất cả mốc thời gian từ cột time axis
             if (timeAxis != null) {
                 for (i in 0 until timeAxis.childCount) {
                     val child = timeAxis.getChildAt(i)
@@ -117,6 +119,14 @@ class View_Calendar_Fragment : Fragment() {
                                 bundle.putString("KEY_THU", dayName) // Hợp lệ vì nằm trong vòng lặp chứa dayName!
                                 bundle.putString("KEY_GIO", timeSlot) // Hợp lệ vì nằm trong vòng lặp chứa timeSlot!
 
+                                // Kiểm tra xem ô này đã có dữ liệu chưa (để hiển thị lại trên Popup)
+                                val data = cell.tag as? Bundle
+                                if (data != null) {
+                                    bundle.putString("EDIT_NOI_DUNG", data.getString("GOC_NOI_DUNG"))
+                                    bundle.putString("EDIT_BAT_DAU", data.getString("GOC_BAT_DAU"))
+                                    bundle.putString("EDIT_KET_THUC", data.getString("GOC_KET_THUC"))
+                                }
+
                                 // 2. Tạo Popup và buộc hành lý vào
                                 val popup = PopupFragment()
                                 popup.arguments = bundle //
@@ -139,28 +149,42 @@ class View_Calendar_Fragment : Fragment() {
     /**
      * Hàm thêm sự kiện vào một ô cụ thể
      * @param cell Ô cần thêm sự kiện (FrameLayout)
-     * @param eventName Tên sự kiện
+     * @param noiDungGoc Nội dung gốc (Topic: Content)
      * @param day Ngày trong tuần
-     * @param time Thời gian
+     * @param timeStart Thời gian bắt đầu
+     * @param timeEnd Thời gian kết thúc
      */
-    fun addEventToCell(cell: FrameLayout, eventName: String, day: String, time: String) {
+    fun addEventToCell(cell: FrameLayout, noiDungGoc: String, day: String, timeStart: String, timeEnd: String) {
         // Xóa view cũ nếu có
         cell.removeAllViews()
 
+        // Lưu thông tin vào tag để khi click lại có thể truyền sang Popup
+        val info = Bundle().apply {
+            putString("GOC_NOI_DUNG", noiDungGoc)
+            putString("GOC_BAT_DAU", timeStart)
+            putString("GOC_KET_THUC", timeEnd)
+        }
+        cell.tag = info
+
         // Tạo TextView để hiển thị sự kiện
         val eventView = TextView(cell.context).apply {
-            text = eventName
-            textSize = 10f
-            setPadding(4, 4, 4, 4)
-            setBackgroundColor(Color.parseColor("#4CAF50"))
+            text = "$noiDungGoc\n($timeStart - $timeEnd)"
+            textSize = 16f
+            setPadding(8, 8, 8, 8)
+
+            val shape = android.graphics.drawable.GradientDrawable()
+            shape.setColor(Color.parseColor("#2196F3")) // Màu nền xanh
+            shape.setStroke(3, Color.WHITE)             // Độ dày viền 3px, màu Trắng
+            shape.cornerRadius = 8f                     // Bo góc một chút cho đẹp
+            
+            background = shape
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
+            setTypeface(null, android.graphics.Typeface.BOLD)
         }
 
         // Thêm vào FrameLayout
         cell.addView(eventView)
-
-        // Gắn sự kiện click cho ô
     }
 
     /**
