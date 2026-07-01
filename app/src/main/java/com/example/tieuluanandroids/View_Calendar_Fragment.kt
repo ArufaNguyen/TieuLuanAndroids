@@ -28,7 +28,18 @@ class View_Calendar_Fragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // Tự động quét 24 tiếng x 7 ngày để gắn sự kiện mở Popup
+
+
         duyetQuaCacCotNgay(view)
+
+        val btnMenu = view.findViewById<android.widget.ImageButton>(R.id.btn_menu)
+        btnMenu?.setOnClickListener {
+            // Tìm cái DrawerLayout bọc ngoài cùng của file fragment_calendar_view.xml
+            val drawerLayout =
+                view.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
+            // Ra lệnh trượt bảng điều hướng ra từ cạnh bên trái (START)
+            drawerLayout?.openDrawer(androidx.core.view.GravityCompat.START)
+        }
 
         val scrollHeader = view.findViewById<HorizontalScrollView>(R.id.scroll_header)
         val scrollBody = view.findViewById<HorizontalScrollView>(R.id.scroll_body)
@@ -76,7 +87,11 @@ class View_Calendar_Fragment : Fragment() {
      * và từng ô thời gian trong mỗi cột
      */
     private fun duyetQuaCacCotNgay(view: View) {
+
+
+
         val weeklyGrid = view.findViewById<LinearLayout>(R.id.layout_weekly_grid)
+
 
         if (weeklyGrid != null) {
             val columns = listOf(
