@@ -133,10 +133,16 @@ class LlmPlanner(
 
     private fun inferCategory(message: String): String? {
         val text = normalize(message)
+        val wantsPortal = "portal" in text
+        val mutatesEvent = listOf("them", "tao", "add", "create", "xoa", "delete", "remove", "cancel", "huy").any(text::contains)
         return when {
+            !mutatesEvent && (
+                listOf("event gi", "events gi", "co event", "co lich", "lich cua toi", "event cua toi", "danh sach event", "liet ke event", "existing event").any(text::contains) ||
+                    (!wantsPortal && listOf("lich", "hom nay", "ngay mai", "tuan nay", "hoc gi", "mon gi").any(text::contains))
+                ) -> "EVENT_READ"
             listOf("import lich", "dong bo lich", "sync lich", "them lich portal", "lich portal", "schedule into events", "add schedule to events", "import schedule").any(text::contains) &&
-                listOf("event", "events", "calendar").any(text::contains) -> "SCHEDULE_IMPORT"
-            listOf("lich", "hoc gi", "tuan nay", "tuan sau").any(text::contains) -> "SCHEDULE"
+                listOf("event", "events", "calendar", "portal").any(text::contains) && wantsPortal -> "SCHEDULE_IMPORT"
+            wantsPortal && listOf("lich", "hoc gi", "tuan nay", "tuan sau", "mon gi").any(text::contains) -> "SCHEDULE"
             listOf("hoc ky", "semester").any(text::contains) -> "SEMESTER"
             listOf("thong bao", "notification").any(text::contains) -> "NOTIFICATION"
             listOf("da dang ky", "dang ky mon nao", "lhp da dang ky").any(text::contains) -> "REGISTERED_COURSES"

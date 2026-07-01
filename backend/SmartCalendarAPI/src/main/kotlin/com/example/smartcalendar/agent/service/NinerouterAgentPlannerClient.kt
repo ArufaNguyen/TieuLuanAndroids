@@ -92,6 +92,16 @@ class NinerouterAgentPlannerClient(
         Only select a tool from the provided tool list. Never invent URLs or tool names.
         For READ_ONLY tools, use RUN_TOOL when required params can be resolved.
         For LOGIN or USER_CONFIRM_REQUIRED tools, use NEED_CONFIRMATION.
+        For the internal list_events tool, return:
+        - toolName=list_events
+        - category=EVENT_READ
+        - optional params.startDate and params.endDate as ISO dates, for example 2026-07-01.
+        - omit startDate and endDate when the user asks for all events.
+        - optional params.tagId or params.tagName when the user filters by tag.
+        - optional params.keyword when the user searches by event title.
+        Use this tool when the user asks what Smart Calendar events they have, asks for existing events, or explicitly says not to use portal.
+        Do not use SCHEDULE portal tools when the user asks for Smart Calendar events or says not to use portal.
+        Default calendar/event questions must use Smart Calendar events via list_events. Only use SCHEDULE portal tools or import_portal_schedule if the user explicitly includes the word "portal".
         For the internal create_event tool, return:
         - toolName=create_event
         - category=EVENT_WRITE
@@ -110,7 +120,7 @@ class NinerouterAgentPlannerClient(
         - category=SCHEDULE_IMPORT
         - params.startDate and params.endDate as ISO dates, for example 2026-06-20.
         - optional params.tagId or params.tagName when a tag clearly matches; prefer Study for school schedules.
-        Use this tool, not a read-only SCHEDULE tool, when the user asks to fetch/import/sync/add portal schedule into Smart Calendar events.
+        Use this tool, not a read-only SCHEDULE tool, when the user asks to fetch/import/sync/add portal schedule into Smart Calendar events and explicitly includes the word "portal".
         For internal tag tools:
         - create_tag uses category=TAG_WRITE and params.name, optional params.color as a CSS hex color.
         - update_tag uses category=TAG_UPDATE and params.tagId from the available tags, plus params.name and/or params.color.

@@ -64,11 +64,16 @@ class AgentChatService(
         val user = session.account?.user
             ?: throw ApiException(401, "valid session is required for agent chat")
         val availableTools = toolRegistryService.getToolsForUser(user.id)
-        val tools = selectedToolId?.let { id ->
+        val requestedTools = selectedToolId?.let { id ->
             val selected = availableTools.firstOrNull { it.id == id }
                 ?: throw ApiException(404, "selected tool not found for active user")
             listOf(selected)
         } ?: availableTools
+        val tools = if (selectedToolId == null) {
+            applyDefaultEventHarness(message, requestedTools)
+        } else {
+            requestedTools
+        }
         if (tools.isEmpty()) {
             return AgentChatResponse("Bạn chưa có API knowledge nào. Hãy upload HAR trước.", needsClarification = true)
         }
@@ -147,6 +152,39 @@ class AgentChatService(
         )
     }
 
+    private fun applyDefaultEventHarness(message: String, tools: List<AgentToolDescriptor>): List<AgentToolDescriptor> {
+        if (!isCalendarEventIntent(message) || wantsPortal(message)) return tools
+        val filtered = tools.filterNot { tool ->
+            tool.category.equals("SCHEDULE", ignoreCase = true) ||
+                tool.category.equals("SCHEDULE_IMPORT", ignoreCase = true)
+        }
+        return filtered.ifEmpty { tools }
+    }
+
+    private fun wantsPortal(message: String): Boolean {
+        val text = message.lowercase()
+        return "portal" in text
+    }
+
+    private fun isCalendarEventIntent(message: String): Boolean {
+        val text = message.lowercase()
+        return listOf(
+            "event",
+            "events",
+            "calendar",
+            "lich",
+            "lịch",
+            "hom nay",
+            "hôm nay",
+            "ngay mai",
+            "ngày mai",
+            "tuan nay",
+            "tuần này",
+            "mon gi",
+            "môn gì"
+        ).any(text::contains)
+    }
+
     private fun runInternalTool(
         userId: Int,
         sessionToken: String,
@@ -155,6 +193,7 @@ class AgentChatService(
         userMessage: String
     ): AgentChatResponse {
         return when (toolName) {
+            ToolRegistryService.LIST_EVENTS_TOOL_NAME -> listEventsFromAgent(userId, params)
             ToolRegistryService.CREATE_EVENT_TOOL_NAME -> createEventFromAgent(userId, params, userMessage)
             ToolRegistryService.DELETE_EVENT_TOOL_NAME -> deleteEventFromAgent(userId, params)
             ToolRegistryService.IMPORT_PORTAL_SCHEDULE_TOOL_NAME -> importPortalScheduleFromAgent(userId, sessionToken, params, userMessage)
@@ -163,6 +202,56 @@ class AgentChatService(
             ToolRegistryService.DELETE_TAG_TOOL_NAME -> deleteTagFromAgent(userId, params)
             else -> throw ApiException(400, "unsupported internal tool: $toolName")
         }
+    }
+
+    private fun listEventsFromAgent(userId: Int, params: Map<String, String>): AgentChatResponse {
+        val startDate = params["startDate"]?.let(LocalDate::parse)
+        val endDate = params["endDate"]?.let(LocalDate::parse)
+        val effectiveStart = startDate ?: endDate
+        val effectiveEnd = endDate ?: startDate
+        if (effectiveStart != null && effectiveEnd != null && effectiveEnd.isBefore(effectiveStart)) {
+            throw ApiException(400, "endDate must be on or after startDate")
+        }
+
+        val tagId = resolveReadTagId(userId, params)
+        val keyword = params["keyword"]?.takeIf(String::isNotBlank)
+        val result = eventService.getEvents(
+            keyword = keyword,
+            tagId = tagId,
+            userId = userId,
+            from = effectiveStart?.atStartOfDay(),
+            to = effectiveEnd?.atTime(LocalTime.MAX)
+        )
+        if (result.code !in 200..299) throw ApiException(result.code, result.message)
+        val events = result.body.orEmpty()
+        val rangeText = if (effectiveStart != null && effectiveEnd != null) {
+            "trong khoang ${formatDateRange(effectiveStart, effectiveEnd)}"
+        } else {
+            "hien co"
+        }
+        val answer = if (events.isEmpty()) {
+            "Khong co event nao $rangeText."
+        } else {
+            buildString {
+                appendLine("Co ${events.size} event $rangeText:")
+                events.forEach { event ->
+                    val tagText = event.tagName?.takeIf(String::isNotBlank)?.let { " [$it]" }.orEmpty()
+                    appendLine("- #${event.id} ${event.startTime.toLocalDate()} ${event.startTime.toLocalTime()}-${event.endTime.toLocalTime()}: ${event.title}$tagText")
+                }
+            }.trimEnd()
+        }
+        return AgentChatResponse(
+            answer = answer,
+            toolCalls = listOf(
+                AgentToolCallView(
+                    toolId = ToolRegistryService.LIST_EVENTS_TOOL_ID,
+                    toolName = ToolRegistryService.LIST_EVENTS_TOOL_NAME,
+                    category = "EVENT_READ",
+                    params = params + (tagId?.let { mapOf("resolvedTagId" to it.toString()) } ?: emptyMap()),
+                    upstreamStatus = result.code
+                )
+            )
+        )
     }
 
     private fun createEventFromAgent(userId: Int, params: Map<String, String>, userMessage: String): AgentChatResponse {
@@ -499,6 +588,20 @@ class AgentChatService(
                     tagName.contains(it.name, ignoreCase = true)
             }?.id
     }
+
+    private fun resolveReadTagId(userId: Int, params: Map<String, String>): Int? {
+        params["tagId"]?.toIntOrNull()?.let { return validateTagId(userId, it) }
+        val tagName = params["tagName"]?.takeIf(String::isNotBlank) ?: return null
+        val tags = tagRepository.searchTags(null, userId)
+        return tags.firstOrNull { it.name.equals(tagName, ignoreCase = true) }?.id
+            ?: tags.firstOrNull {
+                it.name.contains(tagName, ignoreCase = true) ||
+                    tagName.contains(it.name, ignoreCase = true)
+            }?.id
+    }
+
+    private fun formatDateRange(startDate: LocalDate, endDate: LocalDate): String =
+        if (startDate == endDate) startDate.toString() else "$startDate - $endDate"
 
     private fun validateTagId(userId: Int, tagId: Int): Int {
             val tag = tagRepository.findById(tagId).orElse(null)

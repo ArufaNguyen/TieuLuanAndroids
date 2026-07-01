@@ -54,6 +54,16 @@ class ToolRegistryService(
     }
 
     private fun examples(category: String, params: List<String>): List<ToolExample> = when (category.uppercase()) {
+        "EVENT_READ" -> listOf(
+            ToolExample(
+                "today's events",
+                mapOf("startDate" to "2026-07-01", "endDate" to "2026-07-01")
+            ),
+            ToolExample(
+                "all events",
+                emptyMap()
+            )
+        )
         "EVENT_WRITE" -> listOf(
             ToolExample(
                 "add team meeting from 2026-07-01T08:00:00 to 2026-07-01T09:00:00",
@@ -116,6 +126,23 @@ class ToolRegistryService(
             }
             .ifBlank { "none" }
         return listOf(
+            AgentToolDescriptor(
+                id = LIST_EVENTS_TOOL_ID,
+                toolName = LIST_EVENTS_TOOL_NAME,
+                scope = "INTERNAL",
+                category = "EVENT_READ",
+                method = "INTERNAL",
+                urlTemplate = "internal://events/list",
+                description = "Read/list Smart Calendar events for the active user. Use this for questions like all events, today's events, this week's events, existing events, or when the user explicitly says not to use portal. This reads Smart Calendar data only, not portal schedule. Omit startDate/endDate when the user asks for all events. Available tags for this user: $tagSummary.",
+                requiredParams = emptyList(),
+                optionalParams = listOf("startDate", "endDate", "tagId", "tagName", "keyword"),
+                requiredCredentialHeaders = emptyList(),
+                optionalCredentialHeaders = emptyList(),
+                bodySchema = null,
+                safetyLevel = "READ_ONLY",
+                readOnly = true,
+                examples = examples("EVENT_READ", emptyList())
+            ),
             AgentToolDescriptor(
                 id = CREATE_EVENT_TOOL_ID,
                 toolName = CREATE_EVENT_TOOL_NAME,
@@ -223,6 +250,8 @@ class ToolRegistryService(
 
     companion object {
         private val URL_PARAM = Regex("""\{([^}]+)}""")
+        const val LIST_EVENTS_TOOL_ID = -1004
+        const val LIST_EVENTS_TOOL_NAME = "list_events"
         const val CREATE_EVENT_TOOL_ID = -1001
         const val CREATE_EVENT_TOOL_NAME = "create_event"
         const val DELETE_EVENT_TOOL_ID = -1002
