@@ -103,6 +103,12 @@ class SmartCalendarData(
         return remoteDataSource.getDiscoveryJobs()
     }
 
+    suspend fun savePortalAuthorizationCredential(portalToken: String) =
+        remoteDataSource.savePortalAuthorizationCredential(portalToken)
+
+    suspend fun agentChatV2(message: String, confirmed: Boolean = false) =
+        remoteDataSource.agentChatV2(message, confirmed)
+
     private suspend fun localWrite(write: suspend () -> Unit): AppResult<Unit> = try {
         write()
         syncManager.enqueue()

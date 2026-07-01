@@ -3,6 +3,7 @@ package com.example.smartcalendar.agent.service
 import com.example.smartcalendar.agent.dto.AgentAction
 import com.example.smartcalendar.agent.dto.AgentChatResponse
 import com.example.smartcalendar.agent.dto.AgentToolCallView
+import com.example.smartcalendar.agent.dto.AgentToolDescriptor
 import com.example.smartcalendar.agent.dto.KnownToolRunResult
 import com.example.smartcalendar.agent.dto.NormalizedToolResult
 import com.example.smartcalendar.agent.normalizer.ToolResponseNormalizerRegistry
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import kotlin.system.measureTimeMillis
 
@@ -94,7 +96,7 @@ class AgentChatService(
         val call = plan.toolCalls.single()
         val tool = tools.first { it.id == call.toolId }
         if (tool.method.equals("INTERNAL", ignoreCase = true)) {
-            return runInternalTool(user.id, tool.toolName, call.params, message)
+            return runInternalTool(user.id, sessionToken.orEmpty(), tool.toolName, call.params, message)
         }
         val credentials = credentialResolver.resolve(
             userId = user.id,
@@ -147,6 +149,7 @@ class AgentChatService(
 
     private fun runInternalTool(
         userId: Int,
+        sessionToken: String,
         toolName: String,
         params: Map<String, String>,
         userMessage: String
@@ -154,6 +157,7 @@ class AgentChatService(
         return when (toolName) {
             ToolRegistryService.CREATE_EVENT_TOOL_NAME -> createEventFromAgent(userId, params, userMessage)
             ToolRegistryService.DELETE_EVENT_TOOL_NAME -> deleteEventFromAgent(userId, params)
+            ToolRegistryService.IMPORT_PORTAL_SCHEDULE_TOOL_NAME -> importPortalScheduleFromAgent(userId, sessionToken, params, userMessage)
             ToolRegistryService.CREATE_TAG_TOOL_NAME -> createTagFromAgent(userId, params)
             ToolRegistryService.UPDATE_TAG_TOOL_NAME -> updateTagFromAgent(userId, params, userMessage)
             ToolRegistryService.DELETE_TAG_TOOL_NAME -> deleteTagFromAgent(userId, params)
@@ -225,6 +229,163 @@ class AgentChatService(
                 )
             )
         )
+    }
+
+    private fun importPortalScheduleFromAgent(
+        userId: Int,
+        sessionToken: String,
+        params: Map<String, String>,
+        userMessage: String
+    ): AgentChatResponse {
+        val startDate = params["startDate"]?.let(LocalDate::parse)
+            ?: throw ApiException(400, "startDate is required")
+        val endDate = params["endDate"]?.let(LocalDate::parse)
+            ?: throw ApiException(400, "endDate is required")
+        if (endDate.isBefore(startDate)) throw ApiException(400, "endDate must be on or after startDate")
+
+        val scheduleTool = selectPortalScheduleTool(userId)
+        val credentials = credentialResolver.resolve(
+            userId = userId,
+            requiredHeaders = scheduleTool.requiredCredentialHeaders,
+            optionalHeaders = scheduleTool.optionalCredentialHeaders
+        )
+        if (credentials.missingRequiredHeaders.isNotEmpty()) {
+            return AgentChatResponse(
+                answer = "Bạn cần đăng nhập portal trước để tôi import lịch.",
+                needsClarification = true,
+                missing = credentials.missingRequiredHeaders
+            )
+        }
+
+        val seedParams = scheduleSeedParams(scheduleTool, startDate, endDate)
+        val runParams = scheduleRunParams(seedParams, startDate to endDate)
+        val runResults = runParams.map { paramsForRun ->
+            runTool(
+                userId = userId,
+                sessionToken = sessionToken,
+                toolId = scheduleTool.id,
+                category = scheduleTool.category,
+                method = scheduleTool.method,
+                params = paramsForRun,
+                credentials = credentials.headers,
+                headers = emptyMap(),
+                body = null
+            )
+        }
+        val normalized = combineNormalized(runResults.map { normalizers.normalize(scheduleTool, it) })
+        val tagId = resolveEventTagId(userId, params + ("tagName" to params.getOrDefault("tagName", "Study")), userMessage)
+        val eventInputs = normalized.items
+            .mapNotNull { item -> scheduleItemToEventInput(item, startDate, endDate, tagId, userId) }
+            .distinctBy { "${it.title}|${it.startTime}|${it.endTime}" }
+        val created = eventInputs
+            .mapNotNull { input ->
+                val result = eventService.createEvent(input, userId)
+                if (result.code in 200..299) result.body?.id else null
+            }
+        val skippedWithoutTime = normalized.items.size - eventInputs.size
+        val answer = if (created.isEmpty() && skippedWithoutTime > 0) {
+            "Khong import event vi du lieu lich portal hien tai khong co gio hoc chi tiet. Hay dung schedule tool tra ve tuGio/denGio hoac endpoint chi tiet thay vi lich thang."
+        } else {
+            "Da import ${created.size} event tu lich portal vao Smart Calendar."
+        }
+
+        return AgentChatResponse(
+            answer = answer,
+            toolCalls = listOf(
+                AgentToolCallView(
+                    toolId = ToolRegistryService.IMPORT_PORTAL_SCHEDULE_TOOL_ID,
+                    toolName = ToolRegistryService.IMPORT_PORTAL_SCHEDULE_TOOL_NAME,
+                    category = "SCHEDULE_IMPORT",
+                    params = params + mapOf(
+                        "scheduleToolId" to scheduleTool.id.toString(),
+                        "createdEventIds" to created.joinToString(","),
+                        "skippedWithoutTime" to skippedWithoutTime.toString()
+                    ) + (tagId?.let { mapOf("resolvedTagId" to it.toString()) } ?: emptyMap()),
+                    upstreamStatus = runResults.firstOrNull()?.status
+                )
+            )
+        )
+    }
+
+    private fun selectPortalScheduleTool(userId: Int): AgentToolDescriptor =
+        toolRegistryService.getToolsForUser(userId)
+            .filter { it.category.equals("SCHEDULE", ignoreCase = true) }
+            .sortedWith(
+                compareByDescending<AgentToolDescriptor> { "portal.ut.edu.vn" in it.urlTemplate }
+                    .thenByDescending { scheduleDetailPriority(it.urlTemplate) }
+                    .thenByDescending { it.scope == "CUSTOM" }
+                    .thenByDescending { it.id }
+            )
+            .firstOrNull()
+            ?: throw ApiException(404, "portal schedule tool not found")
+
+    private fun scheduleDetailPriority(urlTemplate: String): Int {
+        val lower = urlTemplate.lowercase()
+        return when {
+            "/lichhoc/ngay" in lower -> 3
+            "/lichhoc/tuan" in lower -> 2
+            "/lichhoc/thang" in lower -> 0
+            else -> 1
+        }
+    }
+
+    private fun scheduleSeedParams(tool: AgentToolDescriptor, startDate: LocalDate, endDate: LocalDate): Map<String, String> {
+        val startDateParamName = tool.requiredParams.firstOrNull { it.equals("startDate", ignoreCase = true) }
+        val endDateParamName = tool.requiredParams.firstOrNull { it.equals("endDate", ignoreCase = true) }
+        if (startDateParamName != null && endDateParamName != null) {
+            return mapOf(startDateParamName to startDate.toString(), endDateParamName to endDate.toString())
+        }
+        val dateParamName = tool.requiredParams.firstOrNull {
+            it.contains("date", ignoreCase = true) || it.contains("ngay", ignoreCase = true)
+        } ?: "date"
+        return mapOf(dateParamName to startDate.toString())
+    }
+
+    private fun scheduleItemToEventInput(
+        item: Map<String, Any?>,
+        rangeStart: LocalDate,
+        rangeEnd: LocalDate,
+        tagId: Int?,
+        userId: Int
+    ): CreateEventRequest? {
+        val title = item["title"]?.toString()?.takeIf(String::isNotBlank) ?: return null
+        val date = item["date"]?.toString()?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() }
+        val startText = item["start"]?.toString()
+        val endText = item["end"]?.toString()
+        if (!hasUsableScheduleTime(startText) || !hasUsableScheduleTime(endText)) return null
+        val startTime = scheduleDateTime(date, startText, endOfDay = false) ?: return null
+        val endTime = scheduleDateTime(date, endText, endOfDay = true)
+            ?: startTime.plusHours(1)
+        if (startTime.toLocalDate().isBefore(rangeStart) || startTime.toLocalDate().isAfter(rangeEnd)) return null
+        return CreateEventRequest(
+            title = title,
+            description = item["location"]?.toString()?.takeIf(String::isNotBlank),
+            startTime = startTime,
+            endTime = if (endTime.isAfter(startTime)) endTime else startTime.plusHours(1),
+            tagId = tagId,
+            userId = userId
+        )
+    }
+
+    private fun hasUsableScheduleTime(value: String?): Boolean {
+        val text = value?.trim().orEmpty()
+        if (text.isBlank()) return false
+        if (Regex("""\d{1,2}:\d{2}""").containsMatchIn(text)) return true
+        return runCatching { LocalDateTime.parse(text) }.isSuccess
+    }
+
+    private fun scheduleDateTime(date: LocalDate?, value: String?, endOfDay: Boolean): LocalDateTime? {
+        val text = value?.trim().orEmpty()
+        if (text.isNotBlank()) {
+            runCatching { return LocalDateTime.parse(text) }
+            runCatching { return LocalDate.parse(text.take(10)).atTime(if (endOfDay) LocalTime.of(23, 59) else LocalTime.MIDNIGHT) }
+            if (date != null) {
+                Regex("""(\d{1,2}):(\d{2})""").find(text)?.let { match ->
+                    return date.atTime(match.groupValues[1].toInt(), match.groupValues[2].toInt())
+                }
+            }
+        }
+        return date?.atTime(if (endOfDay) LocalTime.of(23, 59) else LocalTime.MIDNIGHT)
     }
 
     private fun createTagFromAgent(userId: Int, params: Map<String, String>): AgentChatResponse {

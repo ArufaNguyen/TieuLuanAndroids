@@ -47,3 +47,26 @@ data class RemoteWriteResult(
     val message: String,
     val remoteId: String? = null
 )
+
+data class AgentChatResult(
+    val success: Boolean,
+    val message: String,
+    val response: AgentChatResponse? = null
+)
+
+data class AgentChatResponse(
+    val answer: String,
+    val toolCalls: List<AgentToolCall> = emptyList(),
+    val needsConfirmation: Boolean = false,
+    val needsClarification: Boolean = false,
+    val pendingConfirmationId: String? = null,
+    val missing: List<String> = emptyList()
+)
+
+data class AgentToolCall(
+    val toolId: Int?,
+    val toolName: String,
+    val category: String,
+    val params: Map<String, String> = emptyMap(),
+    val upstreamStatus: Int?
+)

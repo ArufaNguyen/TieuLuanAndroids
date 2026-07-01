@@ -32,6 +32,14 @@
             android:id="@+id/action_MenuFragment_to_SessionFragment"
             app:destination="@id/SessionFragment" />
 
+        <action
+            android:id="@+id/action_MenuFragment_to_ApiWebViewFragment"
+            app:destination="@id/ApiWebViewFragment" />
+
+        <action
+            android:id="@+id/action_MenuFragment_to_AgentChatV2Fragment"
+            app:destination="@id/AgentChatV2Fragment" />
+
     </fragment>
 
     <fragment
@@ -84,4 +92,16 @@
         android:name="com.example.tieuluanandroids.ui.events.EventsFragment"
         android:label="@string/events_fragment_label"
         tools:layout="@layout/fragment_events" />
+
+    <fragment
+        android:id="@+id/ApiWebViewFragment"
+        android:name="com.example.tieuluanandroids.ui.webview.ApiWebViewFragment"
+        android:label="API WebView"
+        tools:layout="@layout/fragment_api_webview" />
+
+    <fragment
+        android:id="@+id/AgentChatV2Fragment"
+        android:name="com.example.tieuluanandroids.ui.agent.AgentChatV2Fragment"
+        android:label="Agent Chat V2"
+        tools:layout="@layout/fragment_agent_chat_v2" />
 </navigation>

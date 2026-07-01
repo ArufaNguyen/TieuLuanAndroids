@@ -66,6 +66,12 @@ class ToolRegistryService(
                 mapOf("eventId" to "17")
             )
         )
+        "SCHEDULE_IMPORT" -> listOf(
+            ToolExample(
+                "import portal schedule from 2026-06-20 to 2026-06-30 into events",
+                mapOf("startDate" to "2026-06-20", "endDate" to "2026-06-30", "tagName" to "Study")
+            )
+        )
         "TAG_WRITE" -> listOf(
             ToolExample(
                 "create tag Fitness color #9C27B0",
@@ -145,6 +151,23 @@ class ToolRegistryService(
                 examples = examples("EVENT_DELETE", emptyList())
             ),
             AgentToolDescriptor(
+                id = IMPORT_PORTAL_SCHEDULE_TOOL_ID,
+                toolName = IMPORT_PORTAL_SCHEDULE_TOOL_NAME,
+                scope = "INTERNAL",
+                category = "SCHEDULE_IMPORT",
+                method = "INTERNAL",
+                urlTemplate = "internal://events/import-portal-schedule",
+                description = "Fetch the user's portal schedule through the available SCHEDULE portal tool, then create Smart Calendar events after confirmation. Use this when the user asks to get/import/sync portal schedule into events. Available tags for this user: $tagSummary. Prefer Study tag unless the user clearly asks for another tag.",
+                requiredParams = listOf("startDate", "endDate"),
+                optionalParams = listOf("tagId", "tagName"),
+                requiredCredentialHeaders = emptyList(),
+                optionalCredentialHeaders = emptyList(),
+                bodySchema = null,
+                safetyLevel = "USER_CONFIRM_REQUIRED",
+                readOnly = false,
+                examples = examples("SCHEDULE_IMPORT", emptyList())
+            ),
+            AgentToolDescriptor(
                 id = CREATE_TAG_TOOL_ID,
                 toolName = CREATE_TAG_TOOL_NAME,
                 scope = "INTERNAL",
@@ -204,6 +227,8 @@ class ToolRegistryService(
         const val CREATE_EVENT_TOOL_NAME = "create_event"
         const val DELETE_EVENT_TOOL_ID = -1002
         const val DELETE_EVENT_TOOL_NAME = "delete_event"
+        const val IMPORT_PORTAL_SCHEDULE_TOOL_ID = -1003
+        const val IMPORT_PORTAL_SCHEDULE_TOOL_NAME = "import_portal_schedule"
         const val CREATE_TAG_TOOL_ID = -2001
         const val CREATE_TAG_TOOL_NAME = "create_tag"
         const val UPDATE_TAG_TOOL_ID = -2002

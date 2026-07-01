@@ -82,6 +82,23 @@ class SmartCalendarRemoteDataSource(
             )
         }
 
+    suspend fun savePortalAuthorizationCredential(portalToken: String): ApiResult =
+        withContext(ioDispatcher) {
+            val credentials = sessionManager.getCredentials()
+                ?: return@withContext ApiResult(false, "Login is required")
+            SmartCalendarApiClient.savePortalAuthorizationCredential(
+                credentials.token,
+                portalToken
+            )
+        }
+
+    suspend fun agentChatV2(message: String, confirmed: Boolean = false): AgentChatResult =
+        withContext(ioDispatcher) {
+            val credentials = sessionManager.getCredentials()
+                ?: return@withContext AgentChatResult(false, "Login is required")
+            SmartCalendarApiClient.agentChatV2(credentials.token, message, confirmed)
+        }
+
 
 
     private fun pushEventChange(

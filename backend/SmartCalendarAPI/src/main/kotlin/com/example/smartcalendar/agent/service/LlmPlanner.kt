@@ -134,6 +134,8 @@ class LlmPlanner(
     private fun inferCategory(message: String): String? {
         val text = normalize(message)
         return when {
+            listOf("import lich", "dong bo lich", "sync lich", "them lich portal", "lich portal", "schedule into events", "add schedule to events", "import schedule").any(text::contains) &&
+                listOf("event", "events", "calendar").any(text::contains) -> "SCHEDULE_IMPORT"
             listOf("lich", "hoc gi", "tuan nay", "tuan sau").any(text::contains) -> "SCHEDULE"
             listOf("hoc ky", "semester").any(text::contains) -> "SEMESTER"
             listOf("thong bao", "notification").any(text::contains) -> "NOTIFICATION"
@@ -188,6 +190,8 @@ class LlmPlanner(
                 lower == "title" -> explicitTextFor(name, message) ?: inferEventTitle(message)
                 lower == "starttime" -> explicitDateTimeFor(name, message)
                 lower == "endtime" -> explicitDateTimeFor(name, message)
+                lower == "startdate" -> explicitDateFor(name, message) ?: params.resolveDate(message, currentDate)
+                lower == "enddate" -> explicitDateFor(name, message) ?: params.resolveDate(message, currentDate)
                 lower == "eventid" -> explicitNumberFor(name, message) ?: explicitNumberFor("id", message)
                 lower == "tagid" -> explicitNumberFor(name, message) ?: explicitNumberFor("id", message)
                 lower == "name" -> explicitTextFor(name, message) ?: inferTagNameParam(message)
@@ -222,6 +226,12 @@ class LlmPlanner(
             ?.trim()
             ?.replace(' ', 'T')
             ?.takeIf { it.isNotBlank() }
+
+    private fun explicitDateFor(name: String, message: String): String? =
+        Regex("""${Regex.escape(name)}\s*[=:]\s*(\d{4}-\d{2}-\d{2})""", RegexOption.IGNORE_CASE)
+            .find(message)
+            ?.groupValues
+            ?.get(1)
 
     private fun explicitColorFor(message: String): String? =
         Regex("""(?i)\bcolor\s*[=:]?\s*(#[0-9a-f]{6}|#[0-9a-f]{3})""")

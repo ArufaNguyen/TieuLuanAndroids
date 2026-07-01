@@ -105,6 +105,12 @@ class NinerouterAgentPlannerClient(
         - category=EVENT_DELETE
         - params.eventId from the available events in the tool description.
         If the user asks to delete/remove/cancel an event but the matching event is ambiguous, use NEED_CLARIFICATION and ask which event id to delete.
+        For the internal import_portal_schedule tool, return:
+        - toolName=import_portal_schedule
+        - category=SCHEDULE_IMPORT
+        - params.startDate and params.endDate as ISO dates, for example 2026-06-20.
+        - optional params.tagId or params.tagName when a tag clearly matches; prefer Study for school schedules.
+        Use this tool, not a read-only SCHEDULE tool, when the user asks to fetch/import/sync/add portal schedule into Smart Calendar events.
         For internal tag tools:
         - create_tag uses category=TAG_WRITE and params.name, optional params.color as a CSS hex color.
         - update_tag uses category=TAG_UPDATE and params.tagId from the available tags, plus params.name and/or params.color.

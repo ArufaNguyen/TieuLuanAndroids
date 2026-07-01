@@ -13,6 +13,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.net.CookieManager
 import java.net.CookiePolicy
+import java.util.concurrent.TimeUnit
 
 object SmartCalendarApiClient {
 
@@ -26,6 +27,10 @@ object SmartCalendarApiClient {
 
     val client: OkHttpClient = OkHttpClient.Builder()
         .cookieJar(JavaNetCookieJar(cookieManager))
+        .connectTimeout(0, TimeUnit.MILLISECONDS)
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .writeTimeout(0, TimeUnit.MILLISECONDS)
+        .callTimeout(0, TimeUnit.MILLISECONDS)
         .build()
 
     @Volatile
@@ -274,6 +279,102 @@ object SmartCalendarApiClient {
             )
         }
     }
+
+    fun savePortalAuthorizationCredential(sessionToken: String, portalToken: String): ApiResult {
+        return try {
+            val normalizedAuthorization = portalToken.trim()
+                .let { if (it.startsWith("Bearer ", ignoreCase = true)) it else "Bearer $it" }
+            val captureId = startPortalCredentialCapture(sessionToken)
+            completePortalCredentialCapture(sessionToken, captureId, normalizedAuthorization)
+        } catch (error: Exception) {
+            ApiResult(false, error.message ?: "Cannot save portal credential")
+        }
+    }
+
+    fun agentChatV2(token: String, message: String, confirmed: Boolean): AgentChatResult {
+        return try {
+            val payload = JSONObject()
+                .put("message", message)
+                .put("confirmed", confirmed)
+                .toString()
+            val request = authenticatedRequest("${fetchBaseUrl()}/api/v2/agent/chat", token)
+                .post(payload.toRequestBody(jsonMediaType))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return AgentChatResult(false, "HTTP ${response.code}: $responseBody")
+                }
+
+                val json = JSONObject(responseBody)
+                val code = json.optInt("code", response.code)
+                val apiMessage = json.optString("message", "unknown response")
+                if (code !in 200..299) {
+                    return AgentChatResult(false, apiMessage)
+                }
+
+                val body = json.optJSONObject("body")
+                    ?: return AgentChatResult(false, "Agent chat response has no body")
+                AgentChatResult(true, apiMessage, body.toAgentChatResponse())
+            }
+        } catch (error: Exception) {
+            AgentChatResult(false, error.message ?: "Agent chat failed")
+        }
+    }
+
+    private fun startPortalCredentialCapture(token: String): String {
+        val request = authenticatedRequest("${fetchBaseUrl()}/api/v1/portal-credentials/capture/start", token)
+            .post(JSONObject().toString().toRequestBody(jsonMediaType))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                throw IllegalStateException("HTTP ${response.code}: $responseBody")
+            }
+            val json = JSONObject(responseBody)
+            val code = json.optInt("code", response.code)
+            if (code !in 200..299) {
+                throw IllegalStateException(json.optString("message", "Cannot start credential capture"))
+            }
+            return json.optJSONObject("body")?.optString("captureId")?.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("Credential capture response has no captureId")
+        }
+    }
+
+    private fun completePortalCredentialCapture(
+        token: String,
+        captureId: String,
+        authorization: String
+    ): ApiResult {
+        val payload = JSONObject()
+            .put("authorization", authorization)
+            .toString()
+        val request = authenticatedRequest(
+            "${fetchBaseUrl()}/api/v1/portal-credentials/capture/$captureId/complete",
+            token
+        )
+            .post(payload.toRequestBody(jsonMediaType))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                return ApiResult(false, "HTTP ${response.code}: $responseBody")
+            }
+
+            val json = JSONObject(responseBody)
+            val code = json.optInt("code", response.code)
+            val message = json.optString("message", "Portal credential saved")
+            return if (code in 200..299) {
+                ApiResult(true, message)
+            } else {
+                ApiResult(false, message)
+            }
+        }
+    }
+
     private fun fetchBaseUrl(): String {
         cachedBaseUrl?.let { return it }
 
@@ -343,5 +444,50 @@ object SmartCalendarApiClient {
 
     private fun JSONObject.nullableString(name: String): String? =
         takeUnless { isNull(name) }?.optString(name)?.takeIf { it.isNotBlank() }
+
+    private fun JSONObject.toAgentChatResponse(): AgentChatResponse =
+        AgentChatResponse(
+            answer = optString("answer"),
+            toolCalls = optJSONArray("toolCalls").toAgentToolCalls(),
+            needsConfirmation = optBoolean("needsConfirmation"),
+            needsClarification = optBoolean("needsClarification"),
+            pendingConfirmationId = nullableString("pendingConfirmationId"),
+            missing = optJSONArray("missing").toStringList()
+        )
+
+    private fun org.json.JSONArray?.toAgentToolCalls(): List<AgentToolCall> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                add(
+                    AgentToolCall(
+                        toolId = item.optInt("toolId").takeUnless { item.isNull("toolId") },
+                        toolName = item.optString("toolName"),
+                        category = item.optString("category"),
+                        params = item.optJSONObject("params").toStringMap(),
+                        upstreamStatus = item.optInt("upstreamStatus")
+                            .takeUnless { item.isNull("upstreamStatus") }
+                    )
+                )
+            }
+        }
+    }
+
+    private fun org.json.JSONArray?.toStringList(): List<String> {
+        if (this == null) return emptyList()
+        return buildList {
+            for (index in 0 until length()) {
+                optString(index).takeIf { it.isNotBlank() }?.let(::add)
+            }
+        }
+    }
+
+    private fun JSONObject?.toStringMap(): Map<String, String> {
+        if (this == null) return emptyMap()
+        return keys().asSequence().associateWith { key ->
+            opt(key)?.toString().orEmpty()
+        }
+    }
 
 }

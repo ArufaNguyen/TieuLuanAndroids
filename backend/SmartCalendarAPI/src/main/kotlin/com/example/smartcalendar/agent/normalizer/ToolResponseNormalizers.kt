@@ -11,6 +11,8 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 interface ToolResponseNormalizer {
     fun supports(category: String): Boolean
@@ -39,7 +41,11 @@ class ScheduleNormalizer(
     override fun supports(category: String) = category.equals("SCHEDULE", ignoreCase = true)
 
     override fun normalize(tool: AgentToolDescriptor, runResult: KnownToolRunResult): NormalizedToolResult =
-        normalizeWithLlm(tool, runResult) ?: normalizeWithRules(runResult)
+        if (hasPortalScheduleRows(runResult)) {
+            normalizeWithRules(runResult)
+        } else {
+            normalizeWithLlm(tool, runResult) ?: normalizeWithRules(runResult)
+        }
 
     private fun normalizeWithLlm(tool: AgentToolDescriptor, runResult: KnownToolRunResult): NormalizedToolResult? {
         if (!enabled()) return null
@@ -96,7 +102,7 @@ class ScheduleNormalizer(
         val rows = rows(runResult.body)
         val items = rows.map {
             mapOf(
-                "date" to it.text("ngayBatDauHoc", "date", "ngay"),
+                "date" to normalizedDate(it.text("ngayBatDauHoc", "date", "ngay")),
                 "title" to it.text("tenMonHoc", "courseName", "subjectName", "title"),
                 "start" to it.text("tuGio", "startTime", "start_time"),
                 "end" to it.text("denGio", "endTime", "end_time"),
@@ -104,6 +110,19 @@ class ScheduleNormalizer(
             ).filterValues { value -> !value.isNullOrBlank() }
         }
         return NormalizedToolResult("Lịch học", "${items.size} mục lịch học.", items, items.isEmpty())
+    }
+
+    private fun hasPortalScheduleRows(runResult: KnownToolRunResult): Boolean =
+        rows(runResult.body).any { row ->
+            row.hasNonNull("ngayBatDauHoc") && (row.hasNonNull("tuGio") || row.hasNonNull("denGio"))
+        }
+
+    private fun normalizedDate(value: String?): String? {
+        val text = value?.trim()?.takeIf(String::isNotBlank) ?: return null
+        return runCatching { LocalDate.parse(text).toString() }
+            .recoverCatching { LocalDate.parse(text, PORTAL_DATE).toString() }
+            .getOrNull()
+            ?: text
     }
 
     private fun toNormalizedResult(node: JsonNode): NormalizedToolResult {
@@ -261,6 +280,8 @@ class GenericJsonNormalizer : ToolResponseNormalizer {
         )
     }
 }
+
+private val PORTAL_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 private fun courseResult(title: String, runResult: KnownToolRunResult): NormalizedToolResult {
     val items = rows(runResult.body).map {

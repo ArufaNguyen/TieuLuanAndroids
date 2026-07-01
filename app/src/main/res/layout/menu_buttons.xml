@@ -43,4 +43,18 @@
         android:layout_marginTop="12dp"
         android:text="Add HAR file" />
 
+    <Button
+        android:id="@+id/button_api_webview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="API WebView" />
+
+    <Button
+        android:id="@+id/button_agent_chat_v2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="Agent Chat V2" />
+
 </LinearLayout>
