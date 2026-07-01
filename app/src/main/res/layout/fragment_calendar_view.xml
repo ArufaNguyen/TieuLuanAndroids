@@ -11,10 +11,52 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
-        android:minHeight="?attr/actionBarSize"
+        android:minHeight="96dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Button
+            android:id="@+id/button_previous_month"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="&lt;"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/text_calendar_month"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:textColor="?attr/colorOnPrimary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/button_next_month"
+            app:layout_constraintStart_toEndOf="@id/button_previous_month"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="July 2026" />
+
+        <Button
+            android:id="@+id/button_next_month"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="&gt;"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Spinner
+            android:id="@+id/spinner_tag_filter"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="60dp"
+            android:layout_marginEnd="60dp"
+            android:backgroundTint="?attr/colorOnPrimary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/text_calendar_month" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <LinearLayout
         android:id="@+id/layout_full_header"
@@ -47,13 +89,13 @@
                 android:divider="?android:attr/listDivider"
                 android:showDividers="middle">
 
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Mon" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Tue" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Wed" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Thu" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Fri" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Sat" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Sun" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_monday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Mon" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_tuesday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Tue" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_wednesday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Wed" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_thursday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Thu" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_friday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Fri" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_saturday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Sat" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_sunday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Sun" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
             </LinearLayout>
         </HorizontalScrollView>
     </LinearLayout>

@@ -1,13 +1,14 @@
 package com.example.tieuluanandroids.ui.events
 
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.TableLayout
-import android.widget.TableRow
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -20,12 +21,14 @@ import com.example.tieuluanandroids.model.Event
 import com.example.tieuluanandroids.model.service.SmartCalendarData
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class EventsFragment : Fragment() {
 
     private lateinit var buttonRefreshEvents: Button
     private lateinit var textEventState: TextView
-    private lateinit var tableEvents: TableLayout
+    private lateinit var listEvents: LinearLayout
     private val data: SmartCalendarData
         get() = (requireActivity().application as SmartCalendarApplication).data
     private var isSyncing = false
@@ -45,10 +48,10 @@ class EventsFragment : Fragment() {
 
         buttonRefreshEvents = view.findViewById(R.id.button_refresh_events)
         textEventState = view.findViewById(R.id.text_event_state)
-        tableEvents = view.findViewById(R.id.table_events)
+        listEvents = view.findViewById(R.id.list_events)
 
         buttonRefreshEvents.setOnClickListener { refresh() }
-        renderHeader()
+        render(events = currentEvents, isLoading = false, message = null)
         observeEvents()
         refresh()
     }
@@ -90,7 +93,7 @@ class EventsFragment : Fragment() {
 
     private fun render(events: List<Event>, isLoading: Boolean, message: String?) {
         val showOwner = data.isDevMode
-        renderHeader(showOwner)
+        listEvents.removeAllViews()
         textEventState.text = when {
             isLoading -> getString(R.string.events_loading)
             message != null -> message
@@ -103,42 +106,89 @@ class EventsFragment : Fragment() {
         }
 
         events.forEach { event ->
-            tableEvents.addView(
-                TableRow(requireContext()).apply {
-                    addView(cell(event.title))
-                    addView(cell(formatTimeRange(event)))
-                    addView(cell(event.tagName))
-                    if (showOwner) addView(cell(event.ownerName))
-                }
-            )
+            listEvents.addView(eventRow(event, showOwner))
         }
     }
 
-    private fun renderHeader(showOwner: Boolean = false) {
-        tableEvents.removeAllViews()
-        tableEvents.addView(
-            TableRow(requireContext()).apply {
-                addView(headerCell(getString(R.string.events_column_title)))
-                addView(headerCell(getString(R.string.events_column_time)))
-                addView(headerCell(getString(R.string.events_column_tag)))
-                if (showOwner) addView(headerCell(getString(R.string.events_column_owner)))
-            }
-        )
-    }
-
-    private fun headerCell(text: String): TextView = cell(text).apply {
-        setTypeface(typeface, Typeface.BOLD)
-    }
-
-    private fun cell(text: String): TextView {
-        val padding = resources.getDimensionPixelSize(R.dimen.event_table_cell_padding)
-        return TextView(requireContext()).apply {
-            this.text = text
+    private fun eventRow(event: Event, showOwner: Boolean): View {
+        val padding = dp(12)
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
-            minWidth = resources.getDimensionPixelSize(R.dimen.event_table_cell_min_width)
+            background = rowBackground()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(10)
+            }
+
+            addView(TextView(context).apply {
+                text = event.title.ifBlank { "Untitled event" }
+                textSize = 16f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.rgb(32, 33, 36))
+            })
+            addView(TextView(context).apply {
+                text = formatTimeRange(event)
+                textSize = 14f
+                setTextColor(Color.rgb(69, 76, 86))
+                setPadding(0, dp(6), 0, 0)
+            })
+            event.description?.takeIf { it.isNotBlank() }?.let { description ->
+                addView(TextView(context).apply {
+                    text = description
+                    textSize = 13f
+                    setTextColor(Color.rgb(95, 99, 104))
+                    setPadding(0, dp(6), 0, 0)
+                })
+            }
+            addView(TextView(context).apply {
+                text = buildMetaText(event, showOwner)
+                textSize = 12f
+                setTextColor(Color.rgb(95, 99, 104))
+                setPadding(0, dp(8), 0, 0)
+            })
         }
     }
 
-    private fun formatTimeRange(event: Event) = "${event.startTime}\n${event.endTime}"
+    private fun rowBackground(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(Color.WHITE)
+            cornerRadius = dp(8).toFloat()
+            setStroke(dp(1), Color.rgb(224, 229, 235))
+        }
+    }
+
+    private fun buildMetaText(event: Event, showOwner: Boolean): String {
+        val parts = mutableListOf<String>()
+        parts += event.tagName.takeIf { it.isNotBlank() } ?: "-"
+        if (event.syncStatus.name != "SYNCED") parts += event.syncStatus.name
+        if (showOwner) parts += event.ownerName.takeIf { it.isNotBlank() } ?: "-"
+        return parts.joinToString("  |  ")
+    }
+
+    private fun formatTimeRange(event: Event): String {
+        val start = parseBackendTime(event.startTime)
+        val end = parseBackendTime(event.endTime)
+        if (start != null && end != null) {
+            val dateText = SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(start)
+            val startText = SimpleDateFormat("HH:mm", Locale.getDefault()).format(start)
+            val endText = SimpleDateFormat("HH:mm", Locale.getDefault()).format(end)
+            return "$dateText | $startText-$endText"
+        }
+        return "${event.startTime}\n${event.endTime}"
+    }
+
+    private fun parseBackendTime(value: String): java.util.Date? {
+        val normalized = value.trim().removeSuffix("Z")
+        val patterns = listOf("yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm:ss")
+        return patterns.firstNotNullOfOrNull { pattern ->
+            runCatching { SimpleDateFormat(pattern, Locale.US).parse(normalized) }.getOrNull()
+        }
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
 }
