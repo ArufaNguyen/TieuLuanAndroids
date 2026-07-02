@@ -33,6 +33,12 @@
     <string name="events_column_tag">Tag</string>
     <string name="events_column_owner">User</string>
     <string name="view_fragment_label">View Fragment Label</string>
+    <string name="button_previous_month">Previous week</string>
+    <string name="button_next_month">Next week</string>
+    <string name="button_today">Today</string>
+    <string name="button_today_short">Hiện tại</string>
+    <string name="gt"><![CDATA[>]]></string>
+    <string name="lt"><![CDATA[<]]></string>
 
     <plurals name="events_loaded_count">
         <item quantity="one">%d event loaded.</item>

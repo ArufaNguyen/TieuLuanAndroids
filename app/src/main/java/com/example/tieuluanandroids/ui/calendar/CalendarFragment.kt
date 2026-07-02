@@ -1,5 +1,6 @@
 package com.example.tieuluanandroids.ui.calendar
 
+import android.app.DatePickerDialog
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -30,9 +31,13 @@ import java.util.Locale
 
 class CalendarFragment : Fragment() {
 
-    private val selectedMonth: Calendar = Calendar.getInstance().apply {
-        set(Calendar.DAY_OF_MONTH, 1)
+    private val selectedDate: Calendar = Calendar.getInstance().apply {
         resetTime()
+    }
+    private val selectedWeekStart: Calendar = Calendar.getInstance().apply {
+        resetTime()
+        time = selectedDate.time
+        moveToWeekStart()
     }
     private lateinit var monthTitle: TextView
     private lateinit var dayHeaders: List<TextView>
@@ -70,14 +75,26 @@ class CalendarFragment : Fragment() {
             view.findViewById(R.id.text_sunday_header)
         )
         view.findViewById<Button>(R.id.button_previous_month).setOnClickListener {
-            selectedMonth.add(Calendar.MONTH, -1)
+            selectedDate.add(Calendar.DAY_OF_MONTH, -7)
+            syncSelectedWeekStart()
             updateMonthHeader()
             renderEvents()
         }
         view.findViewById<Button>(R.id.button_next_month).setOnClickListener {
-            selectedMonth.add(Calendar.MONTH, 1)
+            selectedDate.add(Calendar.DAY_OF_MONTH, 7)
+            syncSelectedWeekStart()
             updateMonthHeader()
             renderEvents()
+        }
+        view.findViewById<Button>(R.id.button_today).setOnClickListener {
+            selectedDate.time = Calendar.getInstance().time
+            selectedDate.resetTime()
+            syncSelectedWeekStart()
+            updateMonthHeader()
+            renderEvents()
+        }
+        monthTitle.setOnClickListener {
+            showDatePicker()
         }
         updateMonthHeader()
         setupTagFilter()
@@ -128,12 +145,8 @@ class CalendarFragment : Fragment() {
      * và từng ô thời gian trong mỗi cột
      */
     private fun updateMonthHeader() {
-        monthTitle.text = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(selectedMonth.time)
-        val firstVisibleDay = (selectedMonth.clone() as Calendar).apply {
-            resetTime()
-            val mondayOffset = (get(Calendar.DAY_OF_WEEK) + 5) % 7
-            add(Calendar.DAY_OF_MONTH, -mondayOffset)
-        }
+        val firstVisibleDay = selectedWeekStart.clone() as Calendar
+        monthTitle.text = dateKey(selectedDate)
         val dayFormat = SimpleDateFormat("EEE dd/MM", Locale.getDefault())
         visibleDates = dayHeaders.mapIndexed { index, header ->
             val day = (firstVisibleDay.clone() as Calendar).apply {
@@ -142,6 +155,28 @@ class CalendarFragment : Fragment() {
             header.text = dayFormat.format(day.time)
             day
         }
+    }
+
+    private fun showDatePicker() {
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                selectedDate.set(year, month, dayOfMonth)
+                selectedDate.resetTime()
+                syncSelectedWeekStart()
+                updateMonthHeader()
+                renderEvents()
+            },
+            selectedDate.get(Calendar.YEAR),
+            selectedDate.get(Calendar.MONTH),
+            selectedDate.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun syncSelectedWeekStart() {
+        selectedWeekStart.time = selectedDate.time
+        selectedWeekStart.resetTime()
+        selectedWeekStart.moveToWeekStart()
     }
 
     private fun observeEvents() {
@@ -196,11 +231,17 @@ class CalendarFragment : Fragment() {
         }
         val options = listOf(ALL_TAGS_LABEL) + names
         updatingTagFilter = true
-        tagFilterSpinner.adapter = ArrayAdapter(
+        tagFilterSpinner.adapter = object : ArrayAdapter<String>(
             requireContext(),
             android.R.layout.simple_spinner_item,
             options
-        ).apply {
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                (view as? TextView)?.setTextColor(Color.BLACK)
+                return view
+            }
+        }.apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
         tagFilterSpinner.setSelection(options.indexOf(selectedTagName ?: ALL_TAGS_LABEL).coerceAtLeast(0))
@@ -543,6 +584,11 @@ class CalendarFragment : Fragment() {
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
+    }
+
+    private fun Calendar.moveToWeekStart() {
+        val mondayOffset = (get(Calendar.DAY_OF_WEEK) + 5) % 7
+        add(Calendar.DAY_OF_MONTH, -mondayOffset)
     }
 
     private data class CalendarEventBlock(
