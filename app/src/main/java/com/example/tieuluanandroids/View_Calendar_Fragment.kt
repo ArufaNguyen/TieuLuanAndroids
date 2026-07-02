@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 
 
 class View_Calendar_Fragment : Fragment() {
@@ -29,6 +30,8 @@ class View_Calendar_Fragment : Fragment() {
 
         // Tự động quét 24 tiếng x 7 ngày để gắn sự kiện mở Popup
 
+        setupAutoCalendar(view)
+
 
         duyetQuaCacCotNgay(view)
 
@@ -41,11 +44,42 @@ class View_Calendar_Fragment : Fragment() {
             drawerLayout?.openDrawer(androidx.core.view.GravityCompat.START)
         }
 
+        // 2. KHÚC CODE MỚI: Bắt sự kiện bấm các nút BÊN TRONG menu side view
+        val navigationView = view.findViewById<com.google.android.material.navigation.NavigationView>(R.id.navigation_view)
+        val drawerLayout = view.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
+
+        navigationView?.setNavigationItemSelectedListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.nav_home -> {
+                    // Đứng tại chỗ vì MenuFragment chính là View_Calendar_Fragment luôn rồi
+                    Toast.makeText(requireContext(), "Bạn đang ở Màn hình chính", Toast.LENGTH_SHORT).show()
+                }
+                R.id.nav_events -> {
+                    // Chuyển sang bảng sự kiện TableLayout cũ của nhóm
+                    findNavController().navigate(R.id.action_MenuFragment_to_FirstFragment)
+                }
+                R.id.nav_login -> {
+                    // Chuyển sang trang Đăng nhập
+                    findNavController().navigate(R.id.action_MenuFragment_to_LoginFragment)
+                }
+                R.id.nav_addevents -> {
+                    // Bật Popup thêm sự kiện bung từ dưới lên chuẩn bài
+                    findNavController().navigate(R.id.action_MenuFragment_to_PopupFragment)
+                }
+            }
+
+            // Đóng side view sau khi chọn xong
+            drawerLayout?.closeDrawer(androidx.core.view.GravityCompat.START)
+            true
+        }
+
         val scrollHeader = view.findViewById<HorizontalScrollView>(R.id.scroll_header)
         val scrollBody = view.findViewById<HorizontalScrollView>(R.id.scroll_body)
         scrollBody.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             scrollHeader.scrollTo(scrollX, 0)
         }
+
+
 
         parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
             val thu = bundle.getString("TRA_VE_THU") ?: ""
@@ -77,6 +111,56 @@ class View_Calendar_Fragment : Fragment() {
                 if (cell != null) {
                     addEventToCell(cell, noiDung, thu, gioBatDau, gioKetThuc)
                 }
+            }
+        }
+    }
+
+    private fun setupAutoCalendar(view: View) {
+
+        val calendar = java.util.Calendar.getInstance()
+        val todayDate = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        val currentDayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK) //cn = 1, t2 = 2...
+
+        val toolBoxFormat = java.text.SimpleDateFormat("EEEE, dd/MM/yyyy", java.util.Locale.ENGLISH)
+        val todayString = toolBoxFormat.format(calendar.time)
+        val tvToolbarDate = view.findViewById<TextView>(R.id.tv_toolbar_date)
+        tvToolbarDate?.text = todayString
+
+
+        if (currentDayOfWeek == java.util.Calendar.SUNDAY) {
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, -6) // Nếu là Chủ Nhật thì lùi 6 ngày để ra Thứ Hai tuần này
+        } else {
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, java.util.Calendar.MONDAY - currentDayOfWeek)
+        }
+
+        // hiển thị: 02/07
+        val dayMonthFormat = java.text.SimpleDateFormat("dd/MM", java.util.Locale.getDefault())
+
+
+        val daysContainer = view.findViewById<LinearLayout>(R.id.layout_days_text_container)
+        val dayNames = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+        if (daysContainer != null && daysContainer.childCount >= 7) {
+
+            for (i in 0..6) {
+                val textView = daysContainer.getChildAt(i) as? TextView
+                if (textView != null) {
+                    val dateStr = dayMonthFormat.format(calendar.time)
+                    // Tự động gán chữ lọt thỏm giữa cột rộng 240dp: Mon (02/07)
+                    textView.text = "${dayNames[i]} ($dateStr)"
+
+
+                    if (calendar.get(java.util.Calendar.DAY_OF_MONTH) == todayDate) {
+                        textView.setBackgroundColor(Color.parseColor("#2196F3")) // Màu nền xanh dương
+                        textView.setTextColor(Color.WHITE)                       // Chữ trắng nổi bật
+                    } else {
+
+                        textView.setBackgroundResource(R.drawable.cell_border)
+                        textView.setTextColor(Color.parseColor("#333333"))
+                    }
+                }
+
+                calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
             }
         }
     }

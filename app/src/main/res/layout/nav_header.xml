@@ -18,7 +18,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Phan Thế Hiển - IC &amp; AI"
+        android:text="Lich siu cap vip pro"
         android:textColor="#FFFFFF"
         android:textSize="14sp" />
 </LinearLayout>

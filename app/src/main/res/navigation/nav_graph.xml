@@ -18,7 +18,17 @@
         <action
             android:id="@+id/action_MenuFragment_to_FirstFragment"
             app:destination="@id/FirstFragment" />
+
+        <action
+            android:id="@+id/action_MenuFragment_to_PopupFragment"
+            app:destination="@id/PopupFragment" />
     </fragment>
+
+    <dialog
+        android:id="@+id/PopupFragment"
+        android:name="com.example.tieuluanandroids.PopupFragment"
+        android:label="Popup"
+        tools:layout="@layout/fragment_popup" />
 
     <fragment
         android:id="@+id/LoginFragment"

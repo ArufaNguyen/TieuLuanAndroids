@@ -43,6 +43,19 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintVertical_bias="0.733" />
 
+            <TextView
+                android:id="@+id/tv_toolbar_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.733" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <LinearLayout
@@ -69,7 +82,7 @@
                 android:fillViewport="true">
 
                 <LinearLayout
-                    android:id="@+id/layout_sticky_header"
+                    android:id="@+id/layout_days_text_container"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:orientation="horizontal"
@@ -377,4 +390,5 @@
         android:background="#FFFFFF"
         app:headerLayout="@layout/nav_header"
         app:menu="@menu/menu_main" />
+
 </androidx.drawerlayout.widget.DrawerLayout>
