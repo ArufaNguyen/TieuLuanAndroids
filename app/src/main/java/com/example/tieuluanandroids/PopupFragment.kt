@@ -16,88 +16,121 @@ import java.util.Calendar
 
 class PopupFragment : BottomSheetDialogFragment() {
 
-    /* b1: khai bao bien toan cuc (Đặt gạch xí chỗ) */
     private lateinit var textTitle: TextView
     private lateinit var spinnerTopic: Spinner
     private lateinit var editText: EditText
-    private lateinit var timeBtn: Button
-    private lateinit var saveBtn: Button
+    private lateinit var startTimeButton: Button
+    private lateinit var endTimeButton: Button
+    private lateinit var saveButton: Button
 
-    /* b2: nap xml (Thổi giao diện vào code) */
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         return inflater.inflate(R.layout.fragment_popup, container, false)
     }
 
-    /* b3: anh xa cac su kien (nối dây điện) */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        textTitle = view.findViewById<TextView>(R.id.text_popup_title)
-        spinnerTopic = view.findViewById<Spinner>(R.id.spinner_topic)
-        editText = view.findViewById<EditText>(R.id.edt_event_content)
-        timeBtn = view.findViewById<Button>(R.id.btn_edt_time)
-        saveBtn = view.findViewById<Button>(R.id.btn_save_event)
+        textTitle = view.findViewById(R.id.text_popup_title)
+        spinnerTopic = view.findViewById(R.id.spinner_topic)
+        editText = view.findViewById(R.id.edt_event_content)
+        startTimeButton = view.findViewById(R.id.btn_time_start)
+        endTimeButton = view.findViewById(R.id.btn_time_end)
+        saveButton = view.findViewById(R.id.btn_save_event)
 
-        /* b4: viet code thuc thi (Logic chức năng) */
+        val selectedDay = arguments?.getString("KEY_THU") ?: "Monday"
+        val selectedTime = normalizeInitialTime(arguments?.getString("KEY_GIO"))
 
-        // ĐỌC HÀNH LÝ ĐƯỢC GỬI SANG (Lấy thông tin ô vừa bấm)
-        val thuDuocChon = arguments?.getString("KEY_THU") ?: "Mon"
-        val gioDuocChon = arguments?.getString("KEY_GIO") ?: "Chọn giờ"
+        textTitle.text = "Them su kien ngay $selectedDay"
+        startTimeButton.text = selectedTime
+        endTimeButton.text = defaultEndTime(selectedTime)
 
-        timeBtn.text = gioDuocChon
-
-        textTitle.text = "Thêm sự kiện ngày $thuDuocChon"
-
-
-        val istTopic = arrayOf("Học tập", "Công việc", "Cá nhân", "Giải trí")
-        val adapterTopic = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, istTopic)
-        adapterTopic.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTopic.adapter = adapterTopic //
-
-        timeBtn.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            val timePickerDialog = TimePickerDialog(
-                requireContext(),
-                { _, hourOfDay, minute ->
-                    val selectedTime = String.format("%02d:%02d", hourOfDay, minute)
-                    timeBtn.text = selectedTime
-                },
-                calendar.get(Calendar.HOUR_OF_DAY),
-                calendar.get(Calendar.MINUTE),
-                true
-            )
-            timePickerDialog.show()
+        spinnerTopic.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            arrayOf("Hoc tap", "Cong viec", "Ca nhan", "Giai tri")
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
 
-        // 3. XỬ LÝ LƯU SỰ KIỆN (Bấm nút Save)
-        saveBtn.setOnClickListener { //
-            val content = editText.text.toString().trim() //
-            val topic = spinnerTopic.selectedItem.toString() //
-            val time = timeBtn.text.toString() // Giờ người dùng chọn (Ví dụ: "1 AM" hoặc "12 PM")
+        startTimeButton.setOnClickListener {
+            showTimePicker(startTimeButton)
+        }
 
-            if (content.isEmpty()) { //
-                Toast.makeText(requireContext(), "Vui lòng nhập nội dung!", Toast.LENGTH_SHORT).show() //
-                return@setOnClickListener //
+        endTimeButton.setOnClickListener {
+            showTimePicker(endTimeButton)
+        }
+
+        saveButton.setOnClickListener {
+            val content = editText.text.toString().trim()
+            if (content.isEmpty()) {
+                Toast.makeText(requireContext(), "Vui long nhap noi dung!", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
 
-            // Đọc Thứ được truyền sang ban đầu (Mặc định nếu trống là Monday)
-            val thuDuocChon = arguments?.getString("KEY_THU") ?: "Monday"
+            val topic = spinnerTopic.selectedItem.toString()
+            val startTime = startTimeButton.text.toString()
+            val endTime = endTimeButton.text.toString()
 
-            // Đóng gói hành lý bắn ngược về cho bảng lịch
-            val resultBundle = Bundle()
-            resultBundle.putString("TRA_VE_THU", thuDuocChon)
-            resultBundle.putString("TRA_VE_GIO", time) // Trả về chuỗi giờ chọn
-            resultBundle.putString("TRA_VE_NOI_DUNG", "$topic: $content") //
+            parentFragmentManager.setFragmentResult(
+                "LUU_SU_KIEN",
+                Bundle().apply {
+                    putString("TRA_VE_THU", selectedDay)
+                    putString("TRA_VE_GIO", startTime)
+                    putString("TRA_VE_GIO_BAT_DAU", startTime)
+                    putString("TRA_VE_GIO_KET_THUC", endTime)
+                    putString("TRA_VE_NOI_DUNG", "$topic: $content")
+                }
+            )
 
-            // Phát tín hiệu "LUU_SU_KIEN" lên hệ thống
-            parentFragmentManager.setFragmentResult("LUU_SU_KIEN", resultBundle)
-
-            Toast.makeText(requireContext(), "Đã lưu sự kiện!", Toast.LENGTH_SHORT).show()
-            dismiss() // Đóng popup
+            Toast.makeText(requireContext(), "Da luu su kien!", Toast.LENGTH_SHORT).show()
+            dismiss()
         }
+    }
+
+    private fun showTimePicker(targetButton: Button) {
+        val calendar = Calendar.getInstance()
+        TimePickerDialog(
+            requireContext(),
+            { _, hourOfDay, minute ->
+                targetButton.text = String.format("%02d:%02d", hourOfDay, minute)
+            },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true
+        ).show()
+    }
+
+    private fun normalizeInitialTime(value: String?): String {
+        val trimmed = value?.trim().orEmpty()
+        if (trimmed.matches(Regex("\\d{2}:\\d{2}"))) return trimmed
+        if (trimmed.matches(Regex("\\d{1}:\\d{2}"))) return "0$trimmed"
+        parseAmPmTime(trimmed)?.let { return it }
+        return "08:00"
+    }
+
+    private fun parseAmPmTime(value: String): String? {
+        val match = Regex("""^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$""").matchEntire(value)
+            ?: return null
+        val rawHour = match.groupValues[1].toIntOrNull() ?: return null
+        val minute = match.groupValues[2].takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0
+        val marker = match.groupValues[3].uppercase()
+        val hour = when {
+            marker == "AM" && rawHour == 12 -> 0
+            marker == "AM" -> rawHour
+            marker == "PM" && rawHour == 12 -> 12
+            else -> rawHour + 12
+        }
+        return String.format("%02d:%02d", hour.coerceIn(0, 23), minute.coerceIn(0, 59))
+    }
+
+    private fun defaultEndTime(startTime: String): String {
+        val parts = startTime.split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 8
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        return String.format("%02d:%02d", (hour + 1) % 24, minute)
     }
 }

@@ -15,6 +15,7 @@ import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -22,6 +23,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.tieuluanandroids.PopupFragment
 import com.example.tieuluanandroids.R
 import com.example.tieuluanandroids.SmartCalendarApplication
+import com.example.tieuluanandroids.model.AppResult
+import com.example.tieuluanandroids.model.CreateEventInput
 import com.example.tieuluanandroids.model.Event
 import com.example.tieuluanandroids.model.service.SmartCalendarData
 import com.example.tieuluanandroids.ui.settings.CalendarSettings
@@ -146,6 +149,7 @@ class CalendarFragment : Fragment() {
                 }
             }
         }
+        setupPopupResultListener()
         observeEvents()
         observeTags()
         refreshEventsOnOpen()
@@ -159,6 +163,7 @@ class CalendarFragment : Fragment() {
         scrollBody?.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             scrollHeader?.scrollTo(scrollX, 0)
         }
+        setupPopupResultListener()
         observeEvents()
         refreshEventsOnOpen()
     }
@@ -176,6 +181,84 @@ class CalendarFragment : Fragment() {
             (header?.getChildAt(index) as? TextView)?.text = dayFormat.format(day.time)
         }
     }
+
+    private fun setupPopupResultListener() {
+        parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
+            val dayName = bundle.getString("TRA_VE_THU").orEmpty()
+            val title = bundle.getString("TRA_VE_NOI_DUNG").orEmpty()
+            val startTime = bundle.getString("TRA_VE_GIO_BAT_DAU")
+                ?: bundle.getString("TRA_VE_GIO")
+                ?: "08:00"
+            val endTime = bundle.getString("TRA_VE_GIO_KET_THUC") ?: defaultEndTime(startTime)
+
+            if (title.isBlank()) {
+                Toast.makeText(requireContext(), "Noi dung su kien dang trong", Toast.LENGTH_SHORT).show()
+                return@setFragmentResultListener
+            }
+
+            val eventDate = dateForWeekday(dayName)
+            val start = combineDateAndTime(eventDate, startTime)
+            val end = combineDateAndTime(eventDate, endTime).apply {
+                if (!after(start)) add(Calendar.DAY_OF_MONTH, 1)
+            }
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                when (
+                    val result = data.createEvent(
+                        CreateEventInput(
+                            title = title,
+                            description = null,
+                            startTime = backendDateTime(start),
+                            endTime = backendDateTime(end)
+                        )
+                    )
+                ) {
+                    is AppResult.Success -> {
+                        Toast.makeText(requireContext(), "Da luu su kien", Toast.LENGTH_SHORT).show()
+                    }
+
+                    is AppResult.Error -> {
+                        Toast.makeText(requireContext(), result.message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun dateForWeekday(dayName: String): Calendar {
+        val index = when (dayName.lowercase(Locale.US)) {
+            "monday", "mon" -> 0
+            "tuesday", "tue" -> 1
+            "wednesday", "wed" -> 2
+            "thursday", "thu" -> 3
+            "friday", "fri" -> 4
+            "saturday", "sat" -> 5
+            "sunday", "sun" -> 6
+            else -> 0
+        }
+        return (visibleDates.getOrNull(index) ?: selectedDate).clone() as Calendar
+    }
+
+    private fun combineDateAndTime(date: Calendar, time: String): Calendar {
+        val parts = time.trim().split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 8
+        val minute = parts.getOrNull(1)?.take(2)?.toIntOrNull() ?: 0
+        return (date.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, hour.coerceIn(0, 23))
+            set(Calendar.MINUTE, minute.coerceIn(0, 59))
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+    }
+
+    private fun defaultEndTime(startTime: String): String {
+        val start = combineDateAndTime(selectedDate, startTime)
+        start.add(Calendar.HOUR_OF_DAY, 1)
+        return SimpleDateFormat("HH:mm", Locale.US).format(start.time)
+    }
+
+    private fun backendDateTime(calendar: Calendar): String =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(calendar.time)
 
 
     /**
