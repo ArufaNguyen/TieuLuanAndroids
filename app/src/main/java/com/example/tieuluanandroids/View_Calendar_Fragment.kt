@@ -30,16 +30,16 @@ class View_Calendar_Fragment : Fragment() {
         // Tự động quét 24 tiếng x 7 ngày để gắn sự kiện mở Popup
         duyetQuaCacCotNgay(view)
 
+        // Tính năng kéo trượt đồng bộ Thứ và Ô của Thắng
         val scrollHeader = view.findViewById<HorizontalScrollView>(R.id.scroll_header)
         val scrollBody = view.findViewById<HorizontalScrollView>(R.id.scroll_body)
         scrollBody.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             scrollHeader.scrollTo(scrollX, 0)
         }
         parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
-            val thu = bundle.getString("TRA_VE_THU") ?: ""
-            val gioBatDau = bundle.getString("TRA_VE_TIME_START") ?: ""
-            val gioKetThuc = bundle.getString("TRA_VE_TIME_END") ?: ""
-            val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: ""
+            val thu = bundle.getString("TRA_VE_THU") ?: ""         // Ví dụ: "Monday"
+            val gio = bundle.getString("TRA_VE_GIO") ?: ""         // Ví dụ: "1 AM" hoặc "12 PM"
+            val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: "" //
 
             // Gọi hàm thông minh để check trùng lịch và xếp chồng thay vì add trực tiếp
             xuLySuKienThongMinh(view, thu, gioBatDau, gioKetThuc, noiDung)
@@ -51,9 +51,11 @@ class View_Calendar_Fragment : Fragment() {
      * và từng ô thời gian trong mỗi cột
      */
     private fun duyetQuaCacCotNgay(view: View) {
+        // Lấy layout chứa các cột ngày (layout_weekly_grid)
         val weeklyGrid = view.findViewById<LinearLayout>(R.id.layout_weekly_grid)
 
         if (weeklyGrid != null) {
+            // Danh sách các cột ngày theo thứ tự
             val columns = listOf(
                 R.id.col_monday to "Monday",
                 R.id.col_tuesday to "Tuesday",
@@ -64,9 +66,11 @@ class View_Calendar_Fragment : Fragment() {
                 R.id.col_sunday to "Sunday"
             )
 
+            // Lấy cột thời gian để biết mốc giờ
             val timeAxis = view.findViewById<LinearLayout>(R.id.layout_time_axis)
             val timeTexts = mutableListOf<String>()
 
+            // Lấy tất cả mốc thời gian từ cột time axis
             if (timeAxis != null) {
                 for (i in 0 until timeAxis.childCount) {
                     val child = timeAxis.getChildAt(i)
@@ -146,6 +150,8 @@ class View_Calendar_Fragment : Fragment() {
         }
 
         cell.addView(eventView)
+
+        // Gắn sự kiện click cho ô
     }
 
     fun xuLySuKienThongMinh(
