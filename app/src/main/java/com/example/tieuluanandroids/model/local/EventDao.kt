@@ -26,6 +26,12 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE remoteId = :remoteId LIMIT 1")
     suspend fun getByRemoteId(remoteId: String): EventEntity?
 
+    @Query(
+        "SELECT * FROM events WHERE ownerId = :ownerId AND remoteId IS NOT NULL " +
+            "AND syncStatus = :syncStatus"
+    )
+    suspend fun getRemoteSyncedForOwner(ownerId: String, syncStatus: SyncStatus): List<EventEntity>
+
     @Upsert
     suspend fun upsert(entity: EventEntity)
 
