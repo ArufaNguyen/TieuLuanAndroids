@@ -1,29 +1,347 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="@drawable/home_page_bg"
+    android:fillViewport="true">
 
-    <Button
-        android:id="@+id/button_login"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Login" />
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <Button
-        android:id="@+id/button_view_calendar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Xem lịch" />
+        <ImageButton
+            android:id="@+id/button_drawer"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/home_chip_bg"
+            android:contentDescription="@string/open_navigation_drawer"
+            android:padding="10dp"
+            android:src="@drawable/ic_menu"
+            app:tint="#0066A6" />
 
-    <Button
-        android:id="@+id/button_1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Button1" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
 
-</LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/home_card_bg"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Thong tin tai khoan"
+                        android:textColor="#1F2937"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:background="@drawable/home_chip_bg"
+                        android:gravity="center"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:text="Chi tiet"
+                        android:textColor="#0066A6"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="14dp"
+                    android:background="#E4EAF2" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/home_avatar_bg"
+                        android:gravity="center"
+                        android:text="XX"
+                        android:textColor="#0066A6"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_home_student_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Nguyen Duc Anh"
+                            android:textColor="#111827"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/text_home_session"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Session: dang cap nhat"
+                            android:textColor="#4B5563"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/text_home_month_count"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Lich thang nay: 12 lich hoc"
+                            android:textColor="#374151"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/text_home_week_count"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Lich tuan nay: 4 lich hoc"
+                            android:textColor="#374151"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/home_card_bg"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/text_home_calendar_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Monthly calendar"
+                        android:textColor="#1F2937"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/text_home_calendar_month"
+                        android:layout_width="wrap_content"
+                        android:layout_height="34dp"
+                        android:background="@drawable/home_chip_bg"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:text="07/2026"
+                        android:textColor="#0066A6"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:columnCount="7">
+
+                    <TextView style="@style/HomeWeekday" android:text="T2" />
+                    <TextView style="@style/HomeWeekday" android:text="T3" />
+                    <TextView style="@style/HomeWeekday" android:text="T4" />
+                    <TextView style="@style/HomeWeekday" android:text="T5" />
+                    <TextView style="@style/HomeWeekday" android:text="T6" />
+                    <TextView style="@style/HomeWeekday" android:text="T7" />
+                    <TextView style="@style/HomeWeekday" android:text="CN" />
+
+                    <TextView android:id="@+id/home_day_0" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_1" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_2" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_3" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_4" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_5" style="@style/HomeDayWeekend" />
+                    <TextView android:id="@+id/home_day_6" style="@style/HomeDayWeekend" />
+
+                    <TextView android:id="@+id/home_day_7" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_8" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_9" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_10" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_11" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_12" style="@style/HomeDayWeekend" />
+                    <TextView android:id="@+id/home_day_13" style="@style/HomeDayWeekend" />
+
+                    <TextView android:id="@+id/home_day_14" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_15" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_16" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_17" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_18" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_19" style="@style/HomeDayWeekend" />
+                    <TextView android:id="@+id/home_day_20" style="@style/HomeDayWeekend" />
+
+                    <TextView android:id="@+id/home_day_21" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_22" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_23" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_24" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_25" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_26" style="@style/HomeDayWeekend" />
+                    <TextView android:id="@+id/home_day_27" style="@style/HomeDayWeekend" />
+
+                    <TextView android:id="@+id/home_day_28" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_29" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_30" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_31" style="@style/HomeDayActive" />
+                    <TextView android:id="@+id/home_day_32" style="@style/HomeDay" />
+                    <TextView android:id="@+id/home_day_33" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_34" style="@style/HomeDayMuted" />
+
+                    <TextView android:id="@+id/home_day_35" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_36" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_37" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_38" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_39" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_40" style="@style/HomeDayMuted" />
+                    <TextView android:id="@+id/home_day_41" style="@style/HomeDayMuted" />
+                </GridLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View style="@style/HomeDotOrange" />
+
+                    <TextView
+                        style="@style/HomeLegend"
+                        android:text="Hoc" />
+
+                    <View style="@style/HomeDotGreen" />
+
+                    <TextView
+                        style="@style/HomeLegend"
+                        android:text="Thi" />
+
+                    <View style="@style/HomeDotPurple" />
+
+                    <TextView
+                        style="@style/HomeLegend"
+                        android:text="Su kien" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_home_today_summary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/home_chip_bg"
+                    android:padding="12dp"
+                    android:text="Hom nay: dang cap nhat"
+                    android:textColor="#374151"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:columnCount="4">
+
+            <Button
+                android:id="@+id/button_view_calendar2"
+                style="@style/HomeShortcut"
+                android:text="Xem lich thang" />
+
+            <Button
+                android:id="@+id/button_view_calendar"
+                style="@style/HomeShortcut"
+                android:text="Su kien" />
+
+            <Button
+                android:id="@+id/button_add_HAR_file"
+                style="@style/HomeShortcut"
+                android:text="Add HAR file" />
+
+            <Button
+                android:id="@+id/button_agent_chat_v2"
+                style="@style/HomeShortcut"
+                android:text="Agent Chat V2" />
+
+            <Button
+                android:id="@+id/button_login"
+                style="@style/HomeShortcut"
+                android:text="Login" />
+
+            <Button
+                android:id="@+id/button_session"
+                style="@style/HomeShortcut"
+                android:text="Session" />
+
+            <Button
+                android:id="@+id/button_api_webview"
+                style="@style/HomeShortcut"
+                android:text="API WebView" />
+
+            <Button
+                android:id="@+id/button_1"
+                style="@style/HomeShortcut"
+                android:text="Dich vu sinh vien" />
+        </GridLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/home_card_bg"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                style="@style/HomePanelTitle"
+                android:text="Tien do hoc tap" />
+
+            <TextView
+                android:layout_width="108dp"
+                android:layout_height="108dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/home_avatar_bg"
+                android:gravity="center"
+                android:text="56/120"
+                android:textColor="#2563EB"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
