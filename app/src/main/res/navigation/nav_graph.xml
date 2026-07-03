@@ -21,58 +21,19 @@
             app:destination="@id/LoginFragment" />
 
         <action
-            android:id="@+id/action_MenuFragment_to_EventsFragment"
-            app:destination="@id/EventsFragment" />
+            android:id="@+id/action_MenuFragment_to_FirstFragment"
+            app:destination="@id/FirstFragment" />
 
         <action
-            android:id="@+id/action_MenuFragment_to_AddHarFileFragment"
-            app:destination="@id/AddHarFileFragment" />
-
-        <action
-            android:id="@+id/action_MenuFragment_to_SessionFragment"
-            app:destination="@id/SessionFragment" />
-
-        <action
-            android:id="@+id/action_MenuFragment_to_ApiWebViewFragment"
-            app:destination="@id/ApiWebViewFragment" />
-
-        <action
-            android:id="@+id/action_MenuFragment_to_AgentChatV2Fragment"
-            app:destination="@id/AgentChatV2Fragment" />
-
+            android:id="@+id/action_MenuFragment_to_PopupFragment"
+            app:destination="@id/PopupFragment" />
     </fragment>
 
-    <fragment
-        android:id="@+id/SessionFragment"
-        android:name="com.example.tieuluanandroids.ui.session.SessionFragment"
-        android:label="Session"
-        tools:layout="@layout/session_layout" />
-
-
-    <fragment
-        android:id="@+id/CalendarFragment"
-        android:name="com.example.tieuluanandroids.ui.calendar.CalendarFragment"
-        android:label="Calendar"
-        tools:layout="@layout/fragment_calendar_view"
-    />
-
-    <fragment
-        android:id="@+id/DiscoveryJobFragment"
-        android:name="com.example.tieuluanandroids.ui.addhar.discoveryjob.DiscoveryJobFragment"
-        android:label="Discovery Job"
-        tools:layout="@layout/discovery_job_layout"
-        />
-
-    <fragment
-        android:id="@+id/AddHarFileFragment"
-        android:name="com.example.tieuluanandroids.ui.addhar.AddHarFileFragment"
-        android:label="@string/add_har_file_label"
-        tools:layout="@layout/add_har_file" >
-        <action
-            android:id="@+id/action_addHarFileFragment_to_discoveryJobsFragment"
-            app:destination="@id/DiscoveryJobFragment" />
-    </fragment>
-
+    <dialog
+        android:id="@+id/PopupFragment"
+        android:name="com.example.tieuluanandroids.PopupFragment"
+        android:label="Popup"
+        tools:layout="@layout/fragment_popup" />
 
     <fragment
         android:id="@+id/LoginFragment"

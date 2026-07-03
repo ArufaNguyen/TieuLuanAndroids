@@ -8,4 +8,16 @@
         android:orderInCategory="100"
         android:title="@string/action_settings"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/nav_home"
+        android:title="Màn hình chính" />
+    <item
+        android:id="@+id/nav_events"
+        android:title="Danh sách sự kiện" />
+    <item
+        android:id="@+id/nav_login"
+        android:title="Đăng nhập hệ thống" />
+    <item
+        android:id="@+id/nav_addevents"
+        android:title="Thêm sự kiện mới" />
 </menu>

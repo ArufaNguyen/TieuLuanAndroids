@@ -1,6 +1,8 @@
 package com.example.tieuluanandroids
 
 import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -102,6 +104,8 @@ class PopupFragment : BottomSheetDialogFragment() {
             }
 
             parentFragmentManager.setFragmentResult("LUU_SU_KIEN", resultBundle)
+
+
             dismiss()
         }
     }
