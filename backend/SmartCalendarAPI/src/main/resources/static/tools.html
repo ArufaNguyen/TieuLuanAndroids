@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Known Tools</title>
+<h3>Known Tools</h3>
+<p><a href="/login.html">Login</a> | <a href="/upload-har.html">Upload HAR</a> | <a href="/agent-chat.html">Agent Chat</a> | <a href="/portal-credential-capture.html">Credential Capture</a> | <a href="/global-knowledge.html">Global Knowledge</a></p>
+<p>User: <span id="userId">?</span></p>
+<button onclick="loadTools()">Reload tools</button>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead><tr><th>ID</th><th>Scope</th><th>Tool</th><th>Category</th><th>Method</th><th>URL</th><th>Run</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<h4>Run Tool</h4>
+<p>Selected ID: <span id="selectedId">manual/name route</span></p>
+<p>Tool <input id="toolName" size="40"></p>
+<h5>Params</h5>
+<div id="paramFields">Choose a tool.</div>
+<h5>Credentials / Headers</h5>
+<div id="credentialFields">Choose a tool.</div>
+<h5>Extra Headers</h5>
+<div id="extraHeaderFields"></div>
+<button type="button" onclick="addExtraHeader()">Add header</button><br><br>
+<h5>Request Body JSON</h5>
+<textarea id="bodyJson" rows="6" cols="100" placeholder="No body required."></textarea><br><br>
+<button onclick="runTool()">Run</button>
+<pre id="out"></pre>
+<script>
+const token = () => localStorage.getItem('sessionToken') || '';
+userId.textContent = localStorage.getItem('userId') || '?';
+let tools = [];
+let selectedToolId = null;
+
+async function loadTools() {
+  const res = await fetch('/api/v1/api-knowledge/me', {
+    headers: {'X-Session-Token': token()}
+  });
+  const json = await res.json();
+  if (json.code !== 200) {
+    out.textContent = JSON.stringify(json, null, 2);
+    return;
+  }
+  tools = json.body || [];
+  rows.innerHTML = '';
+  for (const item of tools) {
+    const tr = document.createElement('tr');
+    const url = item.knowledge && item.knowledge.urlTemplate ? item.knowledge.urlTemplate : item.portalUrl;
+    tr.innerHTML =
+      `<td>${item.id}</td><td>${item.scope}</td><td>${escapeHtml(item.toolName)}</td><td>${item.category}</td>` +
+      `<td>${item.method}</td><td>${escapeHtml(url)}</td>` +
+      `<td><button data-id="${item.id}" data-tool="${escapeHtml(item.toolName)}">Use</button></td>`;
+    tr.querySelector('button').onclick = e => selectTool(Number(e.target.dataset.id));
+    rows.appendChild(tr);
+  }
+}
+
+function selectTool(id) {
+  selectedToolId = id;
+  selectedId.textContent = String(id);
+  const item = tools.find(t => t.id === id);
+  toolName.value = item ? item.toolName : '';
+  renderFields(item);
+}
+
+function renderFields(item) {
+  if (!item || !item.knowledge) {
+    paramFields.textContent = 'Tool knowledge not found.';
+    credentialFields.textContent = 'Tool knowledge not found.';
+    return;
+  }
+  const requiredParams = item.knowledge.requiredParams || [];
+  paramFields.innerHTML = requiredParams.length ? '' : '<p>No params required.</p>';
+  for (const param of requiredParams) {
+    addInput(paramFields, 'param', param.name, guessParamValue(param.name));
+  }
+
+  const policy = item.knowledge.headersPolicy || {};
+  const headers = [
+    ...(policy.requiredCredentialHeaders || []),
+    ...(policy.requiredStaticHeaders || [])
+  ].filter((value, index, array) => array.indexOf(value) === index);
+  credentialFields.innerHTML = headers.length ? '' : '<p>No credentials required.</p>';
+  for (const header of headers) {
+    addInput(credentialFields, 'credential', header, guessHeaderValue(header, item));
+  }
+  extraHeaderFields.innerHTML = '';
+  bodyJson.value = guessBodyValue(item);
+}
+
+function addInput(container, kind, name, value) {
+  const id = `${kind}-${name.replace(/[^a-z0-9_-]/gi, '_')}`;
+  const div = document.createElement('div');
+  div.innerHTML =
+    `<label>${name}<br><input data-kind="${kind}" data-name="${name}" id="${id}" size="90"></label><br><br>`;
+  container.appendChild(div);
+  document.getElementById(id).value = value;
+}
+
+function addExtraHeader(name = '', value = '') {
+  const div = document.createElement('div');
+  div.innerHTML =
+    '<input data-kind="extra-name" placeholder="Header name" size="30"> ' +
+    '<input data-kind="extra-value" placeholder="Header value" size="70"> ' +
+    '<button type="button">Remove</button><br><br>';
+  div.querySelector('[data-kind="extra-name"]').value = name;
+  div.querySelector('[data-kind="extra-value"]').value = value;
+  div.querySelector('button').onclick = () => div.remove();
+  extraHeaderFields.appendChild(div);
+}
+
+function collect(kind) {
+  const result = {};
+  document.querySelectorAll(`[data-kind="${kind}"]`).forEach(input => {
+    if (input.value.trim()) result[input.dataset.name] = input.value.trim();
+  });
+  return result;
+}
+
+function collectExtraHeaders() {
+  const result = {};
+  const names = document.querySelectorAll('[data-kind="extra-name"]');
+  const values = document.querySelectorAll('[data-kind="extra-value"]');
+  names.forEach((nameInput, index) => {
+    const name = nameInput.value.trim();
+    const value = values[index].value.trim();
+    if (name && value) result[name] = value;
+  });
+  return result;
+}
+
+function guessParamValue(name) {
+  const lower = name.toLowerCase();
+  if (lower.includes('date') || lower.includes('ngay')) return new Date().toISOString().slice(0, 10);
+  return '';
+}
+
+function guessHeaderValue(name, item) {
+  const lower = name.toLowerCase();
+  const portal = item && item.portalUrl ? item.portalUrl : '';
+  if (lower === 'content-type') return 'application/json';
+  if (lower === 'accept') return 'application/json, text/plain, */*';
+  if (lower === 'accept-language') return 'vi,en-US;q=0.9,en;q=0.8';
+  if (lower === 'origin') return portal;
+  if (lower === 'referer') return portal ? portal + '/' : '';
+  if (lower === 'user-agent') return navigator.userAgent;
+  if (lower === 'sec-fetch-dest') return 'empty';
+  if (lower === 'sec-fetch-mode') return 'cors';
+  if (lower === 'sec-fetch-site') return 'same-origin';
+  if (lower === 'sec-ch-ua-mobile') return '?0';
+  if (lower === 'sec-ch-ua-platform') return '"Windows"';
+  return '';
+}
+
+function guessBodyValue(item) {
+  if (!item || !item.knowledge) return '';
+  const schema = item.knowledge.requestBodySchema || '';
+  if (!schema && String(item.method).toUpperCase() === 'GET') return '';
+  if (schema.includes('username') && schema.includes('password')) {
+    return JSON.stringify({username: '', password: ''}, null, 2);
+  }
+  if (String(item.method).toUpperCase() !== 'GET') return '{}';
+  return '';
+}
+
+function collectBody() {
+  const value = bodyJson.value.trim();
+  if (!value) return undefined;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    throw new Error('Request Body JSON is invalid: ' + e.message);
+  }
+}
+
+async function runTool() {
+  let parsedBody;
+  try {
+    parsedBody = collectBody();
+  } catch (e) {
+    out.textContent = e.message;
+    return;
+  }
+  const body = {
+    params: collect('param'),
+    credentials: collect('credential'),
+    headers: collectExtraHeaders()
+  };
+  if (parsedBody !== undefined) body.body = parsedBody;
+  const runUrl = selectedToolId
+    ? '/api/v1/tools/by-id/' + encodeURIComponent(selectedToolId) + '/run'
+    : '/api/v1/tools/' + encodeURIComponent(toolName.value) + '/run';
+  const res = await fetch(runUrl, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Session-Token': token()},
+    body: JSON.stringify(body)
+  });
+  out.textContent = JSON.stringify(await res.json(), null, 2);
+}
+
+toolName.addEventListener('input', () => {
+  selectedToolId = null;
+  selectedId.textContent = 'manual/name route';
+});
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+loadTools();
+</script>
+</html>

@@ -12,26 +12,111 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
-        android:minHeight="120dp"
+        android:minHeight="144dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" >
+        app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
-            android:id="@+id/btn_menu"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_marginStart="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Menu Button"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_menu"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_previous_month"
+            android:layout_width="64dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/button_previous_month"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/lt"
+            android:textAllCaps="false"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            app:backgroundTint="?attr/colorPrimary"
+            app:cornerRadius="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/text_calendar_month" />
 
-            app:layout_constraintBottom_toBottomOf="parent"
+        <TextView
+            android:id="@+id/text_calendar_month"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/rounded_dialog_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.733" />
+            tools:text="2026-07-02" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_today"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="@string/button_today"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/button_today_short"
+            android:textAllCaps="false"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            app:backgroundTint="?attr/colorPrimary"
+            app:cornerRadius="8dp"
+            app:layout_constraintEnd_toStartOf="@id/button_next_month"
+            app:layout_constraintStart_toEndOf="@id/button_previous_month"
+            app:layout_constraintTop_toBottomOf="@id/text_calendar_month" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_next_month"
+            android:layout_width="64dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/button_next_month"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:text="@string/gt"
+            android:textAllCaps="false"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            app:backgroundTint="?attr/colorPrimary"
+            app:cornerRadius="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/text_calendar_month" />
+
+        <Spinner
+            android:id="@+id/spinner_tag_filter"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="60dp"
+            android:layout_marginEnd="60dp"
+            android:backgroundTint="?attr/colorOnPrimary"
+
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/button_today" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <LinearLayout
@@ -65,13 +150,13 @@
                 android:divider="?android:attr/listDivider"
                 android:showDividers="middle">
 
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Mon" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Tue" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Wed" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Thu" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Fri" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Sat" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
-                <TextView android:layout_width="240dp" android:layout_height="match_parent" android:text="Sun" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_monday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Mon" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_tuesday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Tue" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_wednesday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Wed" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_thursday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Thu" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_friday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Fri" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_saturday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Sat" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
+                <TextView android:id="@+id/text_sunday_header" android:layout_width="240dp" android:layout_height="match_parent" android:text="Sun" android:gravity="center" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:background="@drawable/cell_border"/>
             </LinearLayout>
         </HorizontalScrollView>
     </LinearLayout>

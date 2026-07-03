@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Agent Chat</title>
+<h3>Agent Chat</h3>
+<p><a href="/login.html">Login</a> | <a href="/tools.html">Tools</a> | <a href="/upload-har.html">Upload HAR</a> | <a href="/portal-credential-capture.html">Credential Capture</a> | <a href="/global-knowledge.html">Global Knowledge</a></p>
+<p>User: <span id="userId">?</span></p>
+
+<p>
+  Tool preset<br>
+  <select id="toolSelect"></select>
+  <button onclick="loadTools()">Reload tools</button>
+</p>
+
+<p>
+  Message<br>
+  <textarea id="message" rows="4" cols="100" placeholder="20/06 tới 30/06 tôi có những môn nào?"></textarea>
+</p>
+<button onclick="sendChat()">Send</button>
+<button id="confirmButton" onclick="confirmRun()" style="display:none">Confirm Run</button>
+
+<h4>Selected Tool</h4>
+<pre id="selectedToolInfo">No tool selected.</pre>
+
+<h4>Answer</h4>
+<pre id="answer"></pre>
+
+<h4>Tool Calls</h4>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Tool</th>
+      <th>Category</th>
+      <th>Params</th>
+      <th>Upstream Status</th>
+    </tr>
+  </thead>
+  <tbody id="toolCalls">
+    <tr><td colspan="5">No tool calls.</td></tr>
+  </tbody>
+</table>
+
+<h4>Raw Response</h4>
+<pre id="out"></pre>
+
+<script>
+const token = () => localStorage.getItem('sessionToken') || '';
+userId.textContent = localStorage.getItem('userId') || '?';
+let tools = [];
+let pendingConfirmation = null;
+
+async function loadTools() {
+  const res = await fetch('/api/v1/api-knowledge/me', {
+    headers: {'X-Session-Token': token()}
+  });
+  const json = await res.json();
+  if (json.code !== 200) {
+    out.textContent = JSON.stringify(json, null, 2);
+    return;
+  }
+  tools = json.body || [];
+  toolSelect.innerHTML = '';
+  for (const item of tools) {
+    const option = document.createElement('option');
+    option.value = item.id;
+    option.textContent = `${item.id} | ${item.scope} | ${item.toolName} | ${item.category} | ${item.method}`;
+    toolSelect.appendChild(option);
+  }
+  renderSelectedTool();
+}
+
+function renderSelectedTool() {
+  const item = selectedTool();
+  if (!item) {
+    selectedToolInfo.textContent = 'No tool selected.';
+    return;
+  }
+  const info = {
+    id: item.id,
+    scope: item.scope,
+    toolName: item.toolName,
+    category: item.category,
+    method: item.method,
+    url: item.knowledge && item.knowledge.urlTemplate ? item.knowledge.urlTemplate : item.portalUrl,
+    requiredParams: item.knowledge && item.knowledge.requiredParams ? item.knowledge.requiredParams : [],
+    requestBodySchema: item.knowledge ? item.knowledge.requestBodySchema : null
+  };
+  selectedToolInfo.textContent = JSON.stringify(info, null, 2);
+}
+
+function selectedTool() {
+  const id = Number(toolSelect.value);
+  return tools.find(tool => tool.id === id);
+}
+
+async function sendChat(confirmed = false) {
+  const item = selectedTool();
+  if (!item) {
+    answer.textContent = 'Choose a tool first.';
+    return;
+  }
+  if (!message.value.trim()) {
+    answer.textContent = 'Enter a message first.';
+    return;
+  }
+  const res = await fetch('/api/v1/agent/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Session-Token': token()
+    },
+    body: JSON.stringify({
+      message: message.value.trim(),
+      toolId: item.id,
+      confirmed
+    })
+  });
+  const json = await res.json();
+  out.textContent = JSON.stringify(json, null, 2);
+  const body = json.body || {};
+  answer.textContent = body.answer || json.message || '';
+  renderToolCalls(body.toolCalls || []);
+  pendingConfirmation = body.needsConfirmation ? {toolId: item.id, message: message.value.trim()} : null;
+  confirmButton.style.display = pendingConfirmation ? '' : 'none';
+}
+
+async function confirmRun() {
+  if (!pendingConfirmation) {
+    answer.textContent = 'No pending confirmation.';
+    return;
+  }
+  await sendChat(true);
+}
+
+function renderToolCalls(calls) {
+  if (!calls.length) {
+    toolCalls.innerHTML = '<tr><td colspan="5">No tool calls.</td></tr>';
+    return;
+  }
+  toolCalls.innerHTML = calls.map(call => `<tr>
+    <td>${escapeHtml(call.toolId || '')}</td>
+    <td>${escapeHtml(call.toolName || '')}</td>
+    <td>${escapeHtml(call.category || '')}</td>
+    <td><pre>${escapeHtml(JSON.stringify(call.params || {}, null, 2))}</pre></td>
+    <td>${escapeHtml(call.upstreamStatus || '')}</td>
+  </tr>`).join('');
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+toolSelect.addEventListener('change', renderSelectedTool);
+loadTools();
+</script>
+</html>

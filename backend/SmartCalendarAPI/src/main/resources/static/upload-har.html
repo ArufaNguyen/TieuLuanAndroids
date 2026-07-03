@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Upload HAR</title>
+<h3>Upload HAR</h3>
+<p><a href="/login.html">Login</a> | <a href="/tools.html">Tools</a> | <a href="/agent-chat.html">Agent Chat</a> | <a href="/portal-credential-capture.html">Credential Capture</a> | <a href="/global-knowledge.html">Global Knowledge</a></p>
+<p>User: <span id="userId">?</span></p>
+<input id="file" type="file" accept=".har"><br><br>
+<fieldset>
+  <legend>Replay</legend>
+  <label>
+    <input id="requireManualApproval" type="checkbox" checked>
+    Require manual approval for POST replay
+  </label>
+  <p>Approved endpoint IDs for POST replay, one per line/comma.</p>
+  <textarea id="approvedEndpointIds" rows="4" cols="90" placeholder="POST https://portal.example/api/..."></textarea>
+  <p>GET replay is always allowed by the analyzer when the HAR contains usable credentials.</p>
+</fieldset>
+<br>
+<button onclick="upload()">Upload</button>
+<button onclick="loadJobs()">Reload jobs</button>
+<h4>Discovery Jobs</h4>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>File</th>
+      <th>Status</th>
+      <th>Primary Tool</th>
+      <th>Tools</th>
+      <th>Created</th>
+      <th>Completed</th>
+      <th>Error</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="jobsBody">
+    <tr><td colspan="9">No jobs loaded.</td></tr>
+  </tbody>
+</table>
+<pre id="out"></pre>
+<script>
+const token = () => localStorage.getItem('sessionToken') || '';
+userId.textContent = localStorage.getItem('userId') || '?';
+let refreshTimer = null;
+
+async function upload() {
+  if (!file.files.length) {
+    out.textContent = 'Choose a .har file first';
+    return;
+  }
+  const form = new FormData();
+  form.append('user_id', localStorage.getItem('userId') || '');
+  form.append('require_manual_approval_for_post_replay', requireManualApproval.checked ? 'true' : 'false');
+  form.append('manual_approved_endpoint_ids', approvedEndpointIds.value);
+  form.append('file', file.files[0]);
+  const res = await fetch('/api/v1/analyze/', {
+    method: 'POST',
+    headers: {'X-Session-Token': token()},
+    body: form
+  });
+  const json = await readJson(res);
+  out.textContent = JSON.stringify(json, null, 2);
+  if (res.ok) {
+    await loadJobs();
+    startAutoRefresh();
+  }
+}
+
+async function loadJobs() {
+  const uid = localStorage.getItem('userId') || '';
+  const url = uid ? `/api/v1/analyze/?user_id=${encodeURIComponent(uid)}` : '/api/v1/analyze/';
+  const res = await fetch(url, {
+    headers: {'X-Session-Token': token()}
+  });
+  const json = await readJson(res);
+  if (!res.ok) {
+    jobsBody.innerHTML = `<tr><td colspan="9">${escapeHtml(json.message || `Request failed (${res.status})`)}</td></tr>`;
+    out.textContent = JSON.stringify(json, null, 2);
+    return;
+  }
+  const jobs = Array.isArray(json.body) ? json.body : [];
+  renderJobs(jobs);
+  if (jobs.some(job => job.status === 'PROCESSING')) startAutoRefresh();
+}
+
+async function viewJob(id) {
+  const res = await fetch(`/api/v1/analyze/${encodeURIComponent(id)}`, {
+    headers: {'X-Session-Token': token()}
+  });
+  out.textContent = JSON.stringify(await readJson(res), null, 2);
+}
+
+async function readJson(res) {
+  const text = await res.text();
+  if (!text) return {code: res.status, message: res.statusText || 'Empty response', body: null};
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    return {code: res.status, message: 'Server returned a non-JSON response', body: text};
+  }
+}
+
+function renderJobs(jobs) {
+  if (!jobs.length) {
+    jobsBody.innerHTML = '<tr><td colspan="9">No jobs found.</td></tr>';
+    return;
+  }
+  jobsBody.innerHTML = jobs.map(job => {
+    const result = job.result || {};
+    const primaryTool = result.primaryTool?.toolName || result.tool?.toolName || '';
+    const tools = Array.isArray(result.tools) ? result.tools.map(tool => tool.toolName).join(', ') : '';
+    return `<tr>
+      <td>${escapeHtml(job.id || '')}</td>
+      <td>${escapeHtml(job.fileName || '')}</td>
+      <td>${escapeHtml(job.status || '')}</td>
+      <td>${escapeHtml(primaryTool)}</td>
+      <td>${escapeHtml(tools)}</td>
+      <td>${escapeHtml(job.createdAt || '')}</td>
+      <td>${escapeHtml(job.completedAt || '')}</td>
+      <td>${escapeHtml(job.errorMessage || '')}</td>
+      <td><button onclick="viewJob('${escapeJs(job.id || '')}')">View</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function startAutoRefresh() {
+  if (refreshTimer) return;
+  refreshTimer = setInterval(async () => {
+    await loadJobs();
+    const hasProcessing = [...jobsBody.querySelectorAll('td:nth-child(3)')]
+      .some(cell => cell.textContent === 'PROCESSING');
+    if (!hasProcessing) {
+      clearInterval(refreshTimer);
+      refreshTimer = null;
+    }
+  }, 3000);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function escapeJs(value) {
+  return String(value).replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+}
+
+loadJobs();
+</script>
+</html>
