@@ -80,14 +80,44 @@
             </LinearLayout>
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btn_save_event"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:text="Lưu sự kiện" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
+            <Button
+                android:id="@+id/btn_edit_event"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Chỉnh sửa"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btn_delete_event"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="Xóa"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/btn_save_event"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Lưu"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
     </LinearLayout>
 
 </FrameLayout>
