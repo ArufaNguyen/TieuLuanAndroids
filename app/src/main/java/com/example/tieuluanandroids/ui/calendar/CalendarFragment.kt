@@ -258,7 +258,7 @@ class CalendarFragment : Fragment() {
     }
 
     private fun backendDateTime(calendar: Calendar): String =
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(calendar.time)
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(calendar.time)
 
 
     /**
