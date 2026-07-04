@@ -38,6 +38,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+
+
         setContentView(R.layout.activity_main)
 
         main = findViewById(R.id.main)
@@ -103,11 +105,24 @@ class MainActivity : AppCompatActivity() {
             appBar.isVisible = true
         }
 
-        fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null)
-                .setAnchorView(R.id.fab)
-                .show()
+        fab.setOnClickListener {
+            val emailIntent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+
+                data = android.net.Uri.parse("mailto:")
+
+                // Điền thông tin thư mặc định sẵn theo ý leader
+                putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf("support.smartcalendar@gmail.com"))
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "[Smart Calendar] Feedback & Suggestion")
+                putExtra(android.content.Intent.EXTRA_TEXT, "Dear Development Team,\n\nMy name í: ....\nI would like to share some feedback regarding the Smart Calendar app as follows:\n...")
+            }
+
+
+            if (emailIntent.resolveActivity(packageManager) != null) {
+                startActivity(emailIntent)
+            } else {
+
+                android.widget.Toast.makeText(this, "No Email app found on the device!", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
