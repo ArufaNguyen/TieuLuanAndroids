@@ -43,7 +43,7 @@ class SyncManager(
 
         val pushError = pushPendingChanges(ownerId)
         val tagPullError = pullTagsIntoRoom()
-        val eventPullError = pullEventsIntoRoom()
+        val eventPullError = pullEventsIntoRoom(ownerId)
         val firstError = pushError ?: tagPullError ?: eventPullError
 
         if (firstError == null) {
@@ -91,12 +91,13 @@ class SyncManager(
         return null
     }
 
-    private suspend fun pullEventsIntoRoom(): String? {
+    private suspend fun pullEventsIntoRoom(ownerId: String): String? {
         val result = remoteDataSource.pullEvents()
         if (!result.success) {
             return result.message
         }
         localDataSource.mergeRemoteEvents(result.items)
+        localDataSource.reconcileMissingRemoteEvents(ownerId, result.items)
         return null
     }
 }

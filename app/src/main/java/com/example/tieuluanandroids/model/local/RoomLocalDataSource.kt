@@ -330,6 +330,16 @@ class RoomLocalDataSource(
         }
     }
 
+    suspend fun reconcileMissingRemoteEvents(ownerId: String, remoteEvents: List<RemoteEvent>) =
+        database.withTransaction {
+            val remoteIds = remoteEvents.map { it.id }.toSet()
+            events.getRemoteSyncedForOwner(ownerId, SyncStatus.SYNCED)
+                .filter { local -> local.remoteId !in remoteIds }
+                .forEach { local ->
+                    events.hardDelete(local.localId)
+                }
+        }
+
     private fun createOutboxChange(
         entityType: String,
         localId: String,

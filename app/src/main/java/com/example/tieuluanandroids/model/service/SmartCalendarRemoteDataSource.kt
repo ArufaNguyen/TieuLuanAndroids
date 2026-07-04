@@ -148,10 +148,22 @@ class SmartCalendarRemoteDataSource(
     private fun buildEventApiPayload(stored: JSONObject) = JSONObject()
         .put("title", stored.optString("title"))
         .putNullable("description", stored.nullableString("description"))
-        .put("startTime", stored.optString("startTime"))
-        .put("endTime", stored.optString("endTime"))
+        .put("startTime", normalizeLocalDateTime(stored.optString("startTime")))
+        .put("endTime", normalizeLocalDateTime(stored.optString("endTime")))
         .putNullable("tagId", stored.nullableInt("tagId"))
         .putNullable("userId", stored.nullableInt("userId"))
+
+    private fun normalizeLocalDateTime(value: String): String {
+        val trimmed = value.trim().removeSuffix("Z")
+        val match = Regex("""^(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$""")
+            .matchEntire(trimmed)
+            ?: return trimmed
+        val date = match.groupValues[1]
+        val hour = match.groupValues[2].toIntOrNull() ?: return trimmed
+        val minute = match.groupValues[3]
+        val second = match.groupValues[4].ifBlank { "00" }
+        return String.format("%sT%02d:%s:%s", date, hour.coerceIn(0, 23), minute, second)
+    }
 
     private fun buildTagApiPayload(stored: JSONObject) = JSONObject()
         .put("name", stored.optString("name"))

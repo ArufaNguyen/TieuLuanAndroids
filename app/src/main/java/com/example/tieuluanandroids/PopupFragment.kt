@@ -48,18 +48,45 @@ class PopupFragment : BottomSheetDialogFragment() {
 
         val selectedDay = arguments?.getString("KEY_THU") ?: "Monday"
         val selectedTime = normalizeInitialTime(arguments?.getString("KEY_GIO"))
+        val selectedEndTime = normalizeInitialTime(arguments?.getString("KEY_GIO_KET_THUC"))
+            .takeIf { arguments?.containsKey("KEY_GIO_KET_THUC") == true }
+            ?: defaultEndTime(selectedTime)
+        val eventLocalId = arguments?.getString("KEY_EVENT_LOCAL_ID")
+        val initialTitle = arguments?.getString("KEY_NOI_DUNG").orEmpty()
+        val tagNames = arguments?.getStringArrayList("KEY_TAG_NAMES")
+            ?.map(String::trim)
+            ?.filter(String::isNotBlank)
+            .orEmpty()
+        val tagLocalIds = arguments?.getStringArrayList("KEY_TAG_LOCAL_IDS").orEmpty()
+        val initialTagLocalId = arguments?.getString("KEY_TAG_LOCAL_ID")
+        val initialTopic = arguments?.getString("KEY_TOPIC")
 
-        textTitle.text = "Them su kien ngay $selectedDay"
+        textTitle.text = if (eventLocalId == null) {
+            "Them su kien ngay $selectedDay"
+        } else {
+            "Sua su kien ngay $selectedDay"
+        }
         startTimeButton.text = selectedTime
-        endTimeButton.text = defaultEndTime(selectedTime)
+        endTimeButton.text = selectedEndTime
 
+        val topics = tagNames.ifEmpty { listOf("-") }
         spinnerTopic.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
-            arrayOf("Hoc tap", "Cong viec", "Ca nhan", "Giai tri")
+            topics
         ).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
+        val selectedTagIndex = tagLocalIds.indexOf(initialTagLocalId)
+            .takeIf { it >= 0 }
+            ?: initialTopic?.let { topic ->
+                topics.indexOfFirst { it.equals(topic, ignoreCase = true) }.takeIf { it >= 0 }
+            }
+        if (selectedTagIndex != null) {
+            spinnerTopic.setSelection(selectedTagIndex)
+        }
+        editText.setText(stripTopicPrefix(initialTitle, topics))
+        deleteButton.visibility = if (eventLocalId.isNullOrBlank()) View.GONE else View.VISIBLE
 
         startTimeButton.setOnClickListener {
             showTimePicker(startTimeButton)
@@ -93,7 +120,8 @@ class PopupFragment : BottomSheetDialogFragment() {
                 return@setOnClickListener
             }
 
-            val topic = spinnerTopic.selectedItem.toString()
+            val tagIndex = spinnerTopic.selectedItemPosition
+            val selectedTagLocalId = tagLocalIds.getOrNull(tagIndex)
             val startTime = startTimeButton.text.toString()
             val endTime = endTimeButton.text.toString()
 
@@ -104,11 +132,25 @@ class PopupFragment : BottomSheetDialogFragment() {
                     putString("TRA_VE_GIO", startTime)
                     putString("TRA_VE_GIO_BAT_DAU", startTime)
                     putString("TRA_VE_GIO_KET_THUC", endTime)
-                    putString("TRA_VE_NOI_DUNG", "$topic: $content")
+                    putString("TRA_VE_NOI_DUNG", content)
+                    putString("TRA_VE_EVENT_LOCAL_ID", eventLocalId)
+                    putString("TRA_VE_TAG_LOCAL_ID", selectedTagLocalId)
                 }
             )
 
             Toast.makeText(requireContext(), "Da luu su kien!", Toast.LENGTH_SHORT).show()
+            dismiss()
+        }
+
+        deleteButton.setOnClickListener {
+            val localId = eventLocalId ?: return@setOnClickListener
+            parentFragmentManager.setFragmentResult(
+                "XOA_SU_KIEN",
+                Bundle().apply {
+                    putString("TRA_VE_EVENT_LOCAL_ID", localId)
+                }
+            )
+            Toast.makeText(requireContext(), "Da xoa su kien!", Toast.LENGTH_SHORT).show()
             dismiss()
         }
     }
@@ -154,5 +196,11 @@ class PopupFragment : BottomSheetDialogFragment() {
         val hour = parts.getOrNull(0)?.toIntOrNull() ?: 8
         val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
         return String.format("%02d:%02d", (hour + 1) % 24, minute)
+    }
+
+    private fun stripTopicPrefix(title: String, topics: List<String>): String {
+        val prefix = topics.firstOrNull { title.startsWith("$it:", ignoreCase = true) }
+            ?: return title
+        return title.drop(prefix.length + 1).trim()
     }
 }

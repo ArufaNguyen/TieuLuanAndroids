@@ -26,6 +26,8 @@ import com.example.tieuluanandroids.SmartCalendarApplication
 import com.example.tieuluanandroids.model.AppResult
 import com.example.tieuluanandroids.model.CreateEventInput
 import com.example.tieuluanandroids.model.Event
+import com.example.tieuluanandroids.model.Tag
+import com.example.tieuluanandroids.model.UpdateEventInput
 import com.example.tieuluanandroids.model.service.SmartCalendarData
 import com.example.tieuluanandroids.ui.settings.CalendarSettings
 import kotlinx.coroutines.launch
@@ -49,7 +51,7 @@ class CalendarFragment : Fragment() {
     private lateinit var rootView: View
     private var visibleDates: List<Calendar> = emptyList()
     private var currentEvents: List<Event> = emptyList()
-    private var currentTagNames: List<String> = emptyList()
+    private var currentTags: List<Tag> = emptyList()
     private var selectedTagName: String? = null
     private var updatingTagFilter = false
     private var MODE: String = CalendarSettings.MODE_LINE
@@ -158,6 +160,7 @@ class CalendarFragment : Fragment() {
         }
         setupPopupResultListener()
         observeEvents()
+        observeTags()
         refreshEventsOnOpen()
     }
 
@@ -176,6 +179,26 @@ class CalendarFragment : Fragment() {
     }
 
     private fun setupPopupResultListener() {
+        parentFragmentManager.setFragmentResultListener("XOA_SU_KIEN", viewLifecycleOwner) { _, bundle ->
+            val eventLocalId = bundle.getString("TRA_VE_EVENT_LOCAL_ID")
+            if (eventLocalId.isNullOrBlank()) {
+                Toast.makeText(requireContext(), "Khong tim thay su kien de xoa", Toast.LENGTH_SHORT).show()
+                return@setFragmentResultListener
+            }
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                when (val result = data.deleteEvent(eventLocalId)) {
+                    is AppResult.Success -> {
+                        Toast.makeText(requireContext(), "Da xoa su kien", Toast.LENGTH_SHORT).show()
+                    }
+
+                    is AppResult.Error -> {
+                        Toast.makeText(requireContext(), result.message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
         parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
             val hanhDong = bundle.getString("HANH_DONG") ?: "SAVE"
             if (hanhDong == "DELETE") return@setFragmentResultListener
@@ -206,7 +229,19 @@ class CalendarFragment : Fragment() {
                             title = title,
                             description = null,
                             startTime = backendDateTime(start),
-                            endTime = backendDateTime(end)
+                            endTime = backendDateTime(end),
+                            tagLocalId = tagLocalId
+                        )
+                    )
+                } else {
+                    data.updateEvent(
+                        UpdateEventInput(
+                            localId = eventLocalId,
+                            title = title,
+                            description = null,
+                            startTime = backendDateTime(start),
+                            endTime = backendDateTime(end),
+                            tagLocalId = tagLocalId
                         )
                     )) {
                         is AppResult.Success -> {
@@ -314,7 +349,7 @@ class CalendarFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 data.observeTags().collect { tags ->
-                    currentTagNames = tags.map { it.name }
+                    currentTags = tags
                     updateTagFilterOptions()
                 }
             }
@@ -340,7 +375,7 @@ class CalendarFragment : Fragment() {
 
     private fun updateTagFilterOptions() {
         if (!::tagFilterSpinner.isInitialized) return
-        val names = (currentTagNames + currentEvents.map { it.tagName })
+        val names = (currentTags.map { it.name } + currentEvents.map { it.tagName })
             .map(String::trim)
             .filter { it.isNotBlank() && it != "-" }
             .distinct()
@@ -503,6 +538,10 @@ class CalendarFragment : Fragment() {
             setBackgroundColor(tagColor(block.event.tagName))
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            setOnClickListener {
+                showEditEventPopup(block.event, block.start, block.end)
+            }
         }
         val horizontalGap = dp(4)
         val availableWidth = dp(240) - horizontalGap * 2
@@ -676,6 +715,45 @@ class CalendarFragment : Fragment() {
     private fun formatEventTimeRange(block: CalendarEventBlock): String {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         return "${formatter.format(block.start.time)}-${formatter.format(block.end.time)}"
+    }
+
+    private fun showEditEventPopup(event: Event, start: Calendar, end: Calendar) {
+        val formatter = SimpleDateFormat("HH:mm", Locale.US)
+        PopupFragment().apply {
+            arguments = Bundle().apply {
+                putString("KEY_EVENT_LOCAL_ID", event.localId)
+                putString("KEY_THU", weekdayName(start))
+                putString("KEY_GIO", formatter.format(start.time))
+                putString("KEY_GIO_KET_THUC", formatter.format(end.time))
+                putString("KEY_NOI_DUNG", event.title)
+                putString("KEY_TAG_LOCAL_ID", event.tagLocalId)
+                putString("KEY_TOPIC", event.tagName)
+                putStringArrayList("KEY_TAG_NAMES", ArrayList(currentTags.map { it.name }))
+                putStringArrayList("KEY_TAG_LOCAL_IDS", ArrayList(currentTags.map { it.localId }))
+            }
+        }.show(parentFragmentManager, "edit_event_${event.localId}")
+    }
+
+    private fun weekdayName(calendar: Calendar): String {
+        return when (calendar.get(Calendar.DAY_OF_WEEK)) {
+            Calendar.MONDAY -> "Monday"
+            Calendar.TUESDAY -> "Tuesday"
+            Calendar.WEDNESDAY -> "Wednesday"
+            Calendar.THURSDAY -> "Thursday"
+            Calendar.FRIDAY -> "Friday"
+            Calendar.SATURDAY -> "Saturday"
+            Calendar.SUNDAY -> "Sunday"
+            else -> "Monday"
+        }
+    }
+
+    private fun tagBundleArguments(dayName: String, timeSlot: String): Bundle {
+        return Bundle().apply {
+            putString("KEY_THU", dayName)
+            putString("KEY_GIO", timeSlot)
+            putStringArrayList("KEY_TAG_NAMES", ArrayList(currentTags.map { it.name }))
+            putStringArrayList("KEY_TAG_LOCAL_IDS", ArrayList(currentTags.map { it.localId }))
+        }
     }
 
     private fun slotIndexForMinute(minuteOfDay: Int): Int {
