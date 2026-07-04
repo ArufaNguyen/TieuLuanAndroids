@@ -11,18 +11,35 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.tieuluanandroids.model.Tag
+import com.example.tieuluanandroids.model.service.SmartCalendarData
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class PopupFragment : BottomSheetDialogFragment() {
 
     private lateinit var textTitle: TextView
     private lateinit var spinnerTopic: Spinner
+    private lateinit var btnManageTopics: Button
     private lateinit var editText: EditText
     private lateinit var startTimeButton: Button
     private lateinit var endTimeButton: Button
     private lateinit var saveButton: Button
     private lateinit var deleteButton: Button
+
+    private val data: SmartCalendarData
+        get() = (requireActivity().application as SmartCalendarApplication).data
+
+    // ArrayList động chứa danh sách chủ đề hiện có (thay cho mảng String[] cố định trước đây)
+    private val danhSachChuDe: ArrayList<Tag> = ArrayList()
+    private lateinit var tagAdapter: ArrayAdapter<String>
+
+    private var eventLocalId: String? = null
+    private var selectedTagLocalId: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -37,6 +54,7 @@ class PopupFragment : BottomSheetDialogFragment() {
 
         textTitle = view.findViewById(R.id.text_popup_title)
         spinnerTopic = view.findViewById(R.id.spinner_topic)
+        btnManageTopics = view.findViewById(R.id.btn_manage_topics)
         editText = view.findViewById(R.id.edt_event_content)
         startTimeButton = view.findViewById(R.id.btn_time_start)
         endTimeButton = view.findViewById(R.id.btn_time_end)
@@ -48,42 +66,44 @@ class PopupFragment : BottomSheetDialogFragment() {
         val selectedEndTime = normalizeInitialTime(arguments?.getString("KEY_GIO_KET_THUC"))
             .takeIf { arguments?.containsKey("KEY_GIO_KET_THUC") == true }
             ?: defaultEndTime(selectedTime)
-        val eventLocalId = arguments?.getString("KEY_EVENT_LOCAL_ID")
+        eventLocalId = arguments?.getString("KEY_EVENT_LOCAL_ID")
         val initialTitle = arguments?.getString("KEY_NOI_DUNG").orEmpty()
-        val tagNames = arguments?.getStringArrayList("KEY_TAG_NAMES")
-            ?.map(String::trim)
-            ?.filter(String::isNotBlank)
-            .orEmpty()
-        val tagLocalIds = arguments?.getStringArrayList("KEY_TAG_LOCAL_IDS").orEmpty()
         val initialTagLocalId = arguments?.getString("KEY_TAG_LOCAL_ID")
-        val initialTopic = arguments?.getString("KEY_TOPIC")
+        selectedTagLocalId = initialTagLocalId
 
-        textTitle.text = if (eventLocalId == null) {
-            "Them su kien ngay $selectedDay"
-        } else {
-            "Sua su kien ngay $selectedDay"
-        }
+        // Sửa lịch nếu ô đã có sự kiện (eventLocalId != null), ngược lại là Thêm lịch mới
+        val dangSua = !eventLocalId.isNullOrBlank()
+        textTitle.text = if (!dangSua) "Thêm lịch ngày $selectedDay" else "Sửa lịch ngày $selectedDay"
+        saveButton.text = if (!dangSua) "Lưu lịch" else "Sửa lịch"
         startTimeButton.text = selectedTime
         endTimeButton.text = selectedEndTime
 
-        val topics = tagNames.ifEmpty { listOf("-") }
-        spinnerTopic.adapter = ArrayAdapter(
+        // Spinner chủ đề khởi tạo rỗng, sẽ được nạp động (ArrayList) ngay khi Room trả dữ liệu
+        tagAdapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
-            topics
+            mutableListOf("-")
         ).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-        val selectedTagIndex = tagLocalIds.indexOf(initialTagLocalId)
-            .takeIf { it >= 0 }
-            ?: initialTopic?.let { topic ->
-                topics.indexOfFirst { it.equals(topic, ignoreCase = true) }.takeIf { it >= 0 }
-            }
-        if (selectedTagIndex != null) {
-            spinnerTopic.setSelection(selectedTagIndex)
+        spinnerTopic.adapter = tagAdapter
+
+        editText.setText(initialTitle)
+        deleteButton.visibility = if (dangSua) View.VISIBLE else View.GONE
+
+        // Mở giao diện quản lý chủ đề (Thêm/Sửa/Xóa chủ đề tự chọn)
+        btnManageTopics.setOnClickListener {
+            TagManagerDialogFragment().show(parentFragmentManager, "tag_manager")
         }
-        editText.setText(stripTopicPrefix(initialTitle, topics))
-        deleteButton.visibility = if (eventLocalId.isNullOrBlank()) View.GONE else View.VISIBLE
+
+        // Theo dõi Room theo thời gian thực -> tự cập nhật ArrayList & Spinner khi có Thêm/Sửa/Xóa chủ đề
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                data.observeTags().collect { tags ->
+                    capNhatSpinnerChuDe(tags)
+                }
+            }
+        }
 
         startTimeButton.setOnClickListener {
             showTimePicker(startTimeButton)
@@ -101,7 +121,7 @@ class PopupFragment : BottomSheetDialogFragment() {
             }
 
             val tagIndex = spinnerTopic.selectedItemPosition
-            val selectedTagLocalId = tagLocalIds.getOrNull(tagIndex)
+            val selectedTagLocalIdMoi = danhSachChuDe.getOrNull(tagIndex)?.localId
             val startTime = startTimeButton.text.toString()
             val endTime = endTimeButton.text.toString()
 
@@ -114,14 +134,21 @@ class PopupFragment : BottomSheetDialogFragment() {
                     putString("TRA_VE_GIO_KET_THUC", endTime)
                     putString("TRA_VE_NOI_DUNG", content)
                     putString("TRA_VE_EVENT_LOCAL_ID", eventLocalId)
-                    putString("TRA_VE_TAG_LOCAL_ID", selectedTagLocalId)
+                    putString("TRA_VE_TAG_LOCAL_ID", selectedTagLocalIdMoi)
                 }
             )
 
-            Toast.makeText(requireContext(), "Da luu su kien!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                if (!dangSua) "Da luu lich!" else "Da sua lich!",
+                Toast.LENGTH_SHORT
+            ).show()
             dismiss()
         }
 
+        // Nút Xóa lịch: xóa sự kiện của ô hiện tại. Sau khi Room xác nhận xóa thành công,
+        // CalendarFragment sẽ tự động gọi lại cell.removeAllViews() (trong clearCalendarCells())
+        // và vẽ lại lịch mới nhất thông qua luồng Flow observeEvents().
         deleteButton.setOnClickListener {
             val localId = eventLocalId ?: return@setOnClickListener
             parentFragmentManager.setFragmentResult(
@@ -130,8 +157,25 @@ class PopupFragment : BottomSheetDialogFragment() {
                     putString("TRA_VE_EVENT_LOCAL_ID", localId)
                 }
             )
-            Toast.makeText(requireContext(), "Da xoa su kien!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Da xoa lich!", Toast.LENGTH_SHORT).show()
             dismiss()
+        }
+    }
+
+    /** Nạp lại ArrayList chủ đề động vào Spinner, giữ lại lựa chọn hiện tại nếu còn tồn tại */
+    private fun capNhatSpinnerChuDe(tags: List<Tag>) {
+        danhSachChuDe.clear()
+        danhSachChuDe.addAll(tags)
+
+        val tenChuDe = if (danhSachChuDe.isEmpty()) listOf("-") else danhSachChuDe.map { it.name }
+        tagAdapter.clear()
+        tagAdapter.addAll(tenChuDe)
+        tagAdapter.notifyDataSetChanged()
+
+        // Ưu tiên giữ lựa chọn theo tagLocalId ban đầu (khi Sửa lịch)
+        val viTriChon = danhSachChuDe.indexOfFirst { it.localId == selectedTagLocalId }
+        if (viTriChon >= 0) {
+            spinnerTopic.setSelection(viTriChon)
         }
     }
 
@@ -152,23 +196,7 @@ class PopupFragment : BottomSheetDialogFragment() {
         val trimmed = value?.trim().orEmpty()
         if (trimmed.matches(Regex("\\d{2}:\\d{2}"))) return trimmed
         if (trimmed.matches(Regex("\\d{1}:\\d{2}"))) return "0$trimmed"
-        parseAmPmTime(trimmed)?.let { return it }
         return "08:00"
-    }
-
-    private fun parseAmPmTime(value: String): String? {
-        val match = Regex("""^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$""").matchEntire(value)
-            ?: return null
-        val rawHour = match.groupValues[1].toIntOrNull() ?: return null
-        val minute = match.groupValues[2].takeIf { it.isNotBlank() }?.toIntOrNull() ?: 0
-        val marker = match.groupValues[3].uppercase()
-        val hour = when {
-            marker == "AM" && rawHour == 12 -> 0
-            marker == "AM" -> rawHour
-            marker == "PM" && rawHour == 12 -> 12
-            else -> rawHour + 12
-        }
-        return String.format("%02d:%02d", hour.coerceIn(0, 23), minute.coerceIn(0, 59))
     }
 
     private fun defaultEndTime(startTime: String): String {
@@ -176,11 +204,5 @@ class PopupFragment : BottomSheetDialogFragment() {
         val hour = parts.getOrNull(0)?.toIntOrNull() ?: 8
         val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
         return String.format("%02d:%02d", (hour + 1) % 24, minute)
-    }
-
-    private fun stripTopicPrefix(title: String, topics: List<String>): String {
-        val prefix = topics.firstOrNull { title.startsWith("$it:", ignoreCase = true) }
-            ?: return title
-        return title.drop(prefix.length + 1).trim()
     }
 }

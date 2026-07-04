@@ -10,8 +10,6 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/backend/SmartCalendarAPI" />
-            <option value="$PROJECT_DIR$/tunnel-url-publisher" />
           </set>
         </option>
       </GradleProjectSettings>

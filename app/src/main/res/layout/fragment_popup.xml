@@ -36,10 +36,21 @@
                 tools:text="Thêm sự kiện mới" />
             <Spinner
                 android:id="@+id/spinner_topic"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1" />
-        </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_manage_topics"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:minWidth="0dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="⚙ Chủ đề"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
 
         <EditText
             android:id="@+id/edt_event_content"
@@ -80,26 +91,25 @@
             </LinearLayout>
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btn_save_event"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:text="Lưu sự kiện" />
+            <Button
+                android:id="@+id/btn_save_event"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="Lưu lịch" />
 
-        <Button
-            android:id="@+id/btn_delete_event"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="#D93025"
-            android:text="Xoa su kien"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
+            <Button
+                android:id="@+id/btn_delete_event"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#D93025"
+                android:text="Xóa lịch"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+        </LinearLayout>
     </LinearLayout>
-
 </FrameLayout>
