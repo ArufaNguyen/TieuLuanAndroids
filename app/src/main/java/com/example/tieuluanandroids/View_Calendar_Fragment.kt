@@ -40,8 +40,10 @@ class View_Calendar_Fragment : Fragment() {
             val thu = bundle.getString("TRA_VE_THU") ?: ""         // Ví dụ: "Monday"
             val gio = bundle.getString("TRA_VE_GIO") ?: ""         // Ví dụ: "1 AM" hoặc "12 PM"
             val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: "" //
-            val gioBatDau = bundle.getString("TRA_VE_BAT_DAU") ?: ""
-            val gioKetThuc = bundle.getString("TRA_VE_KET_THUC") ?: ""
+            val gioBatDau = bundle.getString("TRA_VE_GIO_BAT_DAU")
+                ?: bundle.getString("TRA_VE_GIO")
+                ?: ""
+            val gioKetThuc = bundle.getString("TRA_VE_GIO_KET_THUC") ?: ""
             // Gọi hàm thông minh để check trùng lịch và xếp chồng thay vì add trực tiếp
             xuLySuKienThongMinh(view, thu, gioBatDau, gioKetThuc, noiDung)
         }

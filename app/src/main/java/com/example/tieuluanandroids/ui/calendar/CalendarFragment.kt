@@ -116,31 +116,38 @@ class CalendarFragment : Fragment() {
         updateMonthHeader()
         setupTagFilter()
 
+        // Tự động quét 24 tiếng x 7 ngày để gắn sự kiện mở Popup
         duyetQuaCacCotNgay(view)
 
+        // Tính năng kéo trượt đồng bộ Thứ và Ô của Thắng
         val scrollHeader = view.findViewById<HorizontalScrollView>(R.id.scroll_header)
         val scrollBody = view.findViewById<HorizontalScrollView>(R.id.scroll_body)
         scrollBody.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             scrollHeader.scrollTo(scrollX, 0)
         }
-        parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
-            val hanhDong = bundle.getString("HANH_DONG") ?: "SAVE"
-            val eventId = bundle.getString("XOA_EVENT_ID").orEmpty()
 
-            if (hanhDong == "DELETE") {
-                if (eventId.isNotBlank()) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        when (val result = data.deleteEvent(eventId)) {
-                            is AppResult.Success -> {
-                                Toast.makeText(requireContext(), "Đã xóa sự kiện khỏi cơ sở dữ liệu!", Toast.LENGTH_SHORT).show()
-                            }
-                            is AppResult.Error -> {
-                                Toast.makeText(requireContext(), "Lỗi: ${result.message}", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                } else {
-                    Toast.makeText(requireContext(), "Lỗi: Không tìm thấy ID sự kiện để xóa!", Toast.LENGTH_SHORT).show()
+        // 🔥 THÊM ĐOẠN NÀY: Bộ bắt sóng tự động vẽ chữ lên ô lịch
+        parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
+            val thu = bundle.getString("TRA_VE_THU") ?: ""         // Ví dụ: "Monday"
+            val gio = bundle.getString("TRA_VE_GIO") ?: ""         // Ví dụ: "1 AM" hoặc "12 PM"
+            val noiDung = bundle.getString("TRA_VE_NOI_DUNG") ?: "" //
+
+            // Chuẩn hóa chuỗi chữ để ráp thành ID tương thích XML (Ví dụ: "Monday" -> "monday", "1 AM" -> "1AM")
+            val thuClean = thu.lowercase()
+            val gioClean = gio.replace(" ", "") // Xóa khoảng trắng để tạo chữ "1AM", "12PM"
+
+            // Tự động ghép chuỗi thành ID, ví dụ: "col_monday_1AM"
+            val idString = "col_${thuClean}_$gioClean"
+
+            // Biến chuỗi chữ thành ID hệ thống thật sự R.id
+            val cellId = resources.getIdentifier(idString, "id", requireContext().packageName)
+
+            // Nếu dò trúng ô FrameLayout đó trên giao diện, nạp chữ màu xanh lá vào luôn!
+            if (cellId != 0) {
+                val cell = view.findViewById<FrameLayout>(cellId)
+                if (cell != null) {
+                    // Gọi hàm vẽ cục màu xanh lá cây hiển thị nội dung của bạn
+                    addEventToCell(cell, noiDung, thu, gio)
                 }
             }
         }
@@ -200,19 +207,17 @@ class CalendarFragment : Fragment() {
         }
 
         parentFragmentManager.setFragmentResultListener("LUU_SU_KIEN", viewLifecycleOwner) { _, bundle ->
-            val hanhDong = bundle.getString("HANH_DONG") ?: "SAVE"
-            if (hanhDong == "DELETE") return@setFragmentResultListener
-
             val dayName = bundle.getString("TRA_VE_THU").orEmpty()
             val title = bundle.getString("TRA_VE_NOI_DUNG").orEmpty()
-            
-            val startTime = bundle.getString("TRA_VE_TIME_START")
+            val startTime = bundle.getString("TRA_VE_GIO_BAT_DAU")
                 ?: bundle.getString("TRA_VE_GIO")
                 ?: "08:00"
-            val endTime = bundle.getString("TRA_VE_TIME_END") ?: defaultEndTime(startTime)
+            val endTime = bundle.getString("TRA_VE_GIO_KET_THUC") ?: defaultEndTime(startTime)
+            val eventLocalId = bundle.getString("TRA_VE_EVENT_LOCAL_ID")
+            val tagLocalId = bundle.getString("TRA_VE_TAG_LOCAL_ID")
 
             if (title.isBlank()) {
-                Toast.makeText(requireContext(), "Nội dung sự kiện đang trống", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Noi dung su kien dang trong", Toast.LENGTH_SHORT).show()
                 return@setFragmentResultListener
             }
 
@@ -222,9 +227,9 @@ class CalendarFragment : Fragment() {
                 if (!after(start)) add(Calendar.DAY_OF_MONTH, 1)
             }
 
-            val thucHienLuuVaoDatabase: () -> Unit = {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    when (val result = data.createEvent(
+            viewLifecycleOwner.lifecycleScope.launch {
+                val result = if (eventLocalId.isNullOrBlank()) {
+                    data.createEvent(
                         CreateEventInput(
                             title = title,
                             description = null,
@@ -243,18 +248,24 @@ class CalendarFragment : Fragment() {
                             endTime = backendDateTime(end),
                             tagLocalId = tagLocalId
                         )
-                    )) {
-                        is AppResult.Success -> {
-                            Toast.makeText(requireContext(), "Đã lưu vào cơ sở dữ liệu", Toast.LENGTH_SHORT).show()
+                    )
+                }
+
+                when (result) {
+                    is AppResult.Success -> {
+                        val message = if (eventLocalId.isNullOrBlank()) {
+                            "Da luu su kien"
+                        } else {
+                            "Da cap nhat su kien"
                         }
-                        is AppResult.Error -> {
-                            Toast.makeText(requireContext(), result.message, Toast.LENGTH_LONG).show()
-                        }
+                        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                    }
+
+                    is AppResult.Error -> {
+                        Toast.makeText(requireContext(), result.message, Toast.LENGTH_LONG).show()
                     }
                 }
             }
-
-            xuLySuKienThongMinh(rootView, dayName, startTime, endTime, title, thucHienLuuVaoDatabase)
         }
     }
 
@@ -528,13 +539,13 @@ class CalendarFragment : Fragment() {
     ) {
         val eventView = TextView(cell.context).apply {
             text = if (showTitle && block.laneCount <= MAX_TEXT_EVENT_LANES) {
-                "${block.event.title}\n${formatEventTimeRange(block)}".trim()
+                "${formatEventTimeRange(block)} ${block.event.title}".trim()
             } else {
                 ""
             }
-            textSize = 14f
+            textSize = 10f
             maxLines = 2
-            setPadding(dp(12), dp(3), dp(4), dp(4))
+            setPadding(dp(4), dp(3), dp(4), dp(3))
             setBackgroundColor(tagColor(block.event.tagName))
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER_VERTICAL
@@ -560,8 +571,11 @@ class CalendarFragment : Fragment() {
     }
 
     private fun duyetQuaCacCotNgay(view: View) {
+        // Lấy layout chứa các cột ngày (layout_weekly_grid)
         val weeklyGrid = view.findViewById<LinearLayout>(R.id.layout_weekly_grid)
+
         if (weeklyGrid != null) {
+            // Danh sách các cột ngày theo thứ tự
             val columns = listOf(
                 R.id.col_monday to "Monday",
                 R.id.col_tuesday to "Tuesday",
@@ -572,52 +586,48 @@ class CalendarFragment : Fragment() {
                 R.id.col_sunday to "Sunday"
             )
 
+            // Lấy cột thời gian để biết mốc giờ
             val timeAxis = view.findViewById<LinearLayout>(R.id.layout_time_axis)
             val timeTexts = mutableListOf<String>()
+
+            // Lấy tất cả mốc thời gian từ cột time axis
             if (timeAxis != null) {
                 for (i in 0 until timeAxis.childCount) {
                     val child = timeAxis.getChildAt(i)
-                    if (child is TextView) timeTexts.add(child.text.toString())
+                    if (child is TextView) {
+                        timeTexts.add(child.text.toString())
+                    }
                 }
             }
 
+            // Duyệt qua từng cột ngày
             for ((colId, dayName) in columns) {
                 val column = view.findViewById<LinearLayout>(colId)
                 if (column != null) {
+                    // Duyệt qua từng ô (FrameLayout) trong cột
                     for (i in 0 until column.childCount) {
                         val cell = column.getChildAt(i)
                         if (cell is FrameLayout) {
+                            // Lấy mốc thời gian tương ứng
                             val timeSlot = if (i < timeTexts.size) timeTexts[i] else "Unknown"
 
+                            // Gắn sự kiện click cho từng ô
                             cell.setOnClickListener {
-                                val bundle = Bundle()
-                                bundle.putString("KEY_THU", dayName)
-                                bundle.putString("KEY_GIO", timeSlot)
-
-                                val eventDateKey = dateKey(dateForWeekday(dayName))
-                                val matchedEvent = currentEvents.find { event ->
-                                    val startCal = parseBackendTime(event.startTime)
-                                    if (startCal != null) {
-                                        val startDayKey = dateKey(startCal)
-                                        val slotIndex = slotIndexForMinute(startCal.get(Calendar.HOUR_OF_DAY) * 60 + startCal.get(Calendar.MINUTE))
-                                        startDayKey == eventDateKey && slotIndex == i
-                                    } else {
-                                        false
-                                    }
-                                }
-                                if (matchedEvent != null) {
-                                    bundle.putString("KEY_EVENT_ID", matchedEvent.localId)
-                                    bundle.putString("KEY_NOI_DUNG", matchedEvent.title)
-                                }
-
+                                val bundle = tagBundleArguments(dayName, timeSlot)
                                 val popup = PopupFragment()
                                 popup.arguments = bundle
+
                                 popup.show(parentFragmentManager, popup.tag)
                             }
                         }
                     }
                 }
             }
+
+            // In ra log thông báo đã duyệt xong
+            println("Đã duyệt xong các cột ngày: ${columns.size} cột, mỗi cột ${timeTexts.size} ô")
+        } else {
+            println("Không tìm thấy layout_weekly_grid trong man_hinh_chinh.xml")
         }
     }
 
@@ -628,35 +638,24 @@ class CalendarFragment : Fragment() {
      * @param day Ngày trong tuần
      * @param time Thời gian
      */
-    fun addEventToCell(cell: FrameLayout, noiDungGoc: String, day: String, timeStart: String, timeEnd: String) {
+    fun addEventToCell(cell: FrameLayout, eventName: String, day: String, time: String) {
+        // Xóa view cũ nếu có
         cell.removeAllViews()
 
-        val info = Bundle().apply {
-            putString("GOC_NOI_DUNG", noiDungGoc)
-            putString("GOC_BAT_DAU", timeStart)
-            putString("GOC_KET_THUC", timeEnd)
-        }
-
+        // Tạo TextView để hiển thị sự kiện
         val eventView = TextView(cell.context).apply {
-            text = "$noiDungGoc\n($timeStart - $timeEnd)"
-            textSize = 14f
-            setPadding(8, 8, 8, 8)
-
-            val shape = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor("#2196F3")) // Màu nền xanh rực rỡ
-                setStroke(3, Color.WHITE)             // Độ dày viền 3px, màu Trắng
-                cornerRadius = 8f                     // Bo góc mượt mà
-            }
-            background = shape
+            text = eventName
+            textSize = 10f
+            setPadding(4, 4, 4, 4)
+            setBackgroundColor(Color.parseColor("#4CAF50"))
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
-
-            tag = info
         }
 
+        // Thêm vào FrameLayout
         cell.addView(eventView)
-        cell.tag = info
+
+        // Gắn sự kiện click cho ô
     }
 
     /**
@@ -816,136 +815,6 @@ class CalendarFragment : Fragment() {
             R.id.col_saturday,
             R.id.col_sunday
         )
-    }
-    fun xuLySuKienThongMinh(
-        view: View,
-        thu: String,
-        gioBatDau: String,
-        gioKetThuc: String,
-        noiDung: String,
-        onConfirmSave: () -> Unit
-    ) {
-        val thuLower = thu.lowercase()
-        val thuClean = when {
-            thuLower.contains("monday") || thuLower.contains("thứ 2") || thuLower.contains("t2") || thuLower.contains("mon") -> "monday"
-            thuLower.contains("tuesday") || thuLower.contains("thứ 3") || thuLower.contains("t3") || thuLower.contains("tue") -> "tuesday"
-            thuLower.contains("wednesday") || thuLower.contains("thứ 4") || thuLower.contains("t4") || thuLower.contains("wed") -> "wednesday"
-            thuLower.contains("thursday") || thuLower.contains("thứ 5") || thuLower.contains("t5") || thuLower.contains("thu") -> "thursday"
-            thuLower.contains("friday") || thuLower.contains("thứ 6") || thuLower.contains("t6") || thuLower.contains("fri") -> "friday"
-            thuLower.contains("saturday") || thuLower.contains("thứ 7") || thuLower.contains("t7") || thuLower.contains("sat") -> "saturday"
-            thuLower.contains("sunday") || thuLower.contains("chủ nhật") || thuLower.contains("cn") || thuLower.contains("sun") -> "sunday"
-            else -> "monday"
-        }
-
-        fun getIdFromHour(h: Int): String {
-            val amPm = if (h < 12 || h == 24) "AM" else "PM"
-            val h12 = when {
-                h == 0 || h == 24 -> 12
-                h > 12 -> h - 12
-                else -> h
-            }
-            return "$h12$amPm"
-        }
-
-        try {
-            val startH = gioBatDau.split(":")[0].toInt()
-            val endH = gioKetThuc.split(":")[0].toInt()
-
-            var coOTrung = false
-            for (h in startH until endH) {
-                val idString = "col_${thuClean}_${getIdFromHour(h)}"
-                val cellId = view.resources.getIdentifier(idString, "id", view.context.packageName)
-                if (cellId != 0 && (view.findViewById<FrameLayout>(cellId)?.childCount ?: 0) > 0) {
-                    coOTrung = true
-                    break
-                }
-            }
-
-            fun thucHienToMau() {
-                for (h in startH until endH) {
-                    val idString = "col_${thuClean}_${getIdFromHour(h)}"
-                    val cellId = view.resources.getIdentifier(idString, "id", view.context.packageName)
-                    if (cellId != 0) {
-                        val cell = view.findViewById<FrameLayout>(cellId) ?: continue
-                        if (cell.childCount == 0) {
-                            addEventToCell(cell, noiDung, thu, gioBatDau, gioKetThuc)
-                        } else {
-                            val danhSachSuKien = mutableListOf<Bundle>()
-                            val childView = cell.getChildAt(0)
-                            
-                            if (childView is LinearLayout) {
-                                for (i in 0 until childView.childCount) {
-                                    (childView.getChildAt(i).tag as? Bundle)?.let { danhSachSuKien.add(it) }
-                                }
-                            } else if (childView is TextView) {
-                                (childView.tag as? Bundle)?.let { danhSachSuKien.add(it) }
-                            }
-
-                            val bundleMoi = Bundle().apply {
-                                putString("GOC_NOI_DUNG", noiDung)
-                                putString("GOC_BAT_DAU", gioBatDau)
-                                putString("GOC_KET_THUC", gioKetThuc)
-                            }
-                            danhSachSuKien.add(bundleMoi)
-                            
-                            cell.removeAllViews()
-                            val container = LinearLayout(cell.context).apply {
-                                orientation = LinearLayout.VERTICAL
-                                layoutParams = FrameLayout.LayoutParams(-1, -1)
-                            }
-                            danhSachSuKien.distinctBy { it.getString("GOC_NOI_DUNG") }.forEach { info ->
-                                container.addView(taoEventTextView(cell.context, info.getString("GOC_NOI_DUNG") ?: "", info.getString("GOC_BAT_DAU") ?: "", info.getString("GOC_KET_THUC") ?: "").apply { tag = info })
-                            }
-                            cell.addView(container)
-                        }
-                    }
-                }
-                onConfirmSave()
-            }
-
-            if (coOTrung) {
-                android.app.AlertDialog.Builder(view.context)
-                    .setTitle("Xung đột lịch trình")
-                    .setMessage("Khung giờ này đã có hoạt động. Bạn có muốn xếp chồng thêm hoạt động này không?")
-                    .setPositiveButton("Có") { _, _ -> thucHienToMau() }
-                    .setNegativeButton("Không", null)
-                    .show()
-            } else {
-                thucHienToMau()
-            }
-
-        } catch (e: Exception) {}
-    }
-
-    private fun taoEventTextView(
-        context: android.content.Context,
-        name: String,
-        start: String,
-        end: String
-    ): TextView {
-        return TextView(context).apply {
-            text = "$name\n($start - $end)"
-            textSize = 12f
-            setPadding(8, 4, 8, 4)
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setTypeface(null, android.graphics.Typeface.BOLD)
-
-            val shape = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor("#2196F3"))
-                setStroke(2, Color.WHITE)
-                cornerRadius = 8f
-            }
-            background = shape
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            ).apply {
-                setMargins(0, 2, 0, 2)
-            }
-        }
     }
 
 }

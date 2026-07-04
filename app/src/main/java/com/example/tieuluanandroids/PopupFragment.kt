@@ -22,9 +22,7 @@ class PopupFragment : BottomSheetDialogFragment() {
     private lateinit var startTimeButton: Button
     private lateinit var endTimeButton: Button
     private lateinit var saveButton: Button
-    private lateinit var editButton: Button
     private lateinit var deleteButton: Button
-
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,7 +41,6 @@ class PopupFragment : BottomSheetDialogFragment() {
         startTimeButton = view.findViewById(R.id.btn_time_start)
         endTimeButton = view.findViewById(R.id.btn_time_end)
         saveButton = view.findViewById(R.id.btn_save_event)
-        editButton = view.findViewById(R.id.btn_edit_event)
         deleteButton = view.findViewById(R.id.btn_delete_event)
 
         val selectedDay = arguments?.getString("KEY_THU") ?: "Monday"
@@ -94,23 +91,6 @@ class PopupFragment : BottomSheetDialogFragment() {
 
         endTimeButton.setOnClickListener {
             showTimePicker(endTimeButton)
-        }
-
-        editButton.setOnClickListener {
-            // Logic for editing can be implemented here or handled via fragment result
-            Toast.makeText(requireContext(), "Chế độ chỉnh sửa", Toast.LENGTH_SHORT).show()
-        }
-
-        deleteButton.setOnClickListener {
-            parentFragmentManager.setFragmentResult(
-                "XOA_SU_KIEN",
-                Bundle().apply {
-                    putString("TRA_VE_THU", selectedDay)
-                    putString("TRA_VE_GIO", startTimeButton.text.toString())
-                }
-            )
-            Toast.makeText(requireContext(), "Đã xóa sự kiện!", Toast.LENGTH_SHORT).show()
-            dismiss()
         }
 
         saveButton.setOnClickListener {
