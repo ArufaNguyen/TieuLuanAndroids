@@ -64,6 +64,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.MenuFragment,
                 R.id.CalendarFragment,
                 R.id.EventsFragment,
+                R.id.TagManagerFragment,
                 R.id.LoginFragment,
                 R.id.AddHarFileFragment,
                 R.id.SessionFragment,

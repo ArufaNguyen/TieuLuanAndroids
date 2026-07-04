@@ -94,6 +94,12 @@
         tools:layout="@layout/fragment_events" />
 
     <fragment
+        android:id="@+id/TagManagerFragment"
+        android:name="com.example.tieuluanandroids.ui.tags.TagManagerFragment"
+        android:label="@string/tag_manager_title"
+        tools:layout="@layout/fragment_tag_manager" />
+
+    <fragment
         android:id="@+id/ApiWebViewFragment"
         android:name="com.example.tieuluanandroids.ui.webview.ApiWebViewFragment"
         android:label="API WebView"

@@ -7,6 +7,7 @@
     <string name="login_fragment_label">Login</string>
     <string name="events_fragment_label">Events</string>
     <string name="add_har_file_label">Add HAR file</string>
+    <string name="tag_manager_title">Tag Manager</string>
 
     <string name="login_title">Smart Calendar</string>
     <string name="login_subtitle">Login to manage your events and tags.</string>
@@ -45,6 +46,7 @@
     <string name="drawer_calendar">Calendar</string>
     <string name="drawer_login">Login</string>
     <string name="drawer_events">Events</string>
+    <string name="drawer_tag_manager">Tag Manager</string>
     <string name="drawer_session">Session</string>
     <string name="drawer_api_webview">API WebView</string>
     <string name="drawer_agent_chat_v2">Agent Chat V2</string>

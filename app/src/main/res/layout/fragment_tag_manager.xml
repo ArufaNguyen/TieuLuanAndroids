@@ -1,92 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@drawable/home_page_bg"
+    android:fillViewport="true"
+    tools:context=".ui.tags.TagManagerFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_gravity="bottom"
-        android:background="@drawable/rounded_dialog_bg"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp"
-        android:layout_height="wrap_content">
-
-        <View
-            android:layout_width="150dp"
-            android:layout_height="10dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="16dp"
-            android:background="#D3D3D3" />
+        android:padding="16dp">
 
         <TextView
             android:id="@+id/text_tag_manager_title"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="Quản lý chủ đề"
-            android:textColor="#333333"
-            android:textSize="20sp"
+            android:text="Quan ly tag"
+            android:textColor="#111827"
+            android:textSize="24sp"
             android:textStyle="bold" />
 
-        <!-- Khu vực thêm chủ đề mới -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Tao tag theo ten va mau, sau do dong bo voi /api/v1/tags."
+            android:textColor="#6B7280"
+            android:textSize="14sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_marginTop="16dp"
+            android:background="@drawable/home_card_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Them tag moi"
+                android:textColor="#1F2937"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
             <EditText
                 android:id="@+id/edt_new_topic"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/home_chip_bg"
+                android:hint="Nhap ten tag"
+                android:inputType="textCapSentences"
+                android:maxLines="1"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:textColor="#111827"
+                android:textColorHint="#9CA3AF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Nhập chủ đề mới (VD: đi chơi, đi ngủ...)"
+                android:layout_marginTop="14dp"
+                android:text="Mau tag"
+                android:textColor="#374151"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/radio_tag_color_group"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/radio_tag_color_blue"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:checked="true"
+                    android:text="Xanh"
+                    android:textColor="#2563EB"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/radio_tag_color_green"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="Luc"
+                    android:textColor="#059669"
+                    android:textSize="14sp" />
+
+                <RadioButton
+                    android:id="@+id/radio_tag_color_orange"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="Cam"
+                    android:textColor="#D97706"
+                    android:textSize="14sp" />
+            </RadioGroup>
+
+            <EditText
+                android:id="@+id/edt_tag_color_hex"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/home_chip_bg"
+                android:hint="#2563EB"
                 android:inputType="text"
                 android:maxLines="1"
-                android:textSize="16sp" />
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:textColor="#111827"
+                android:textColorHint="#9CA3AF"
+                android:textSize="15sp" />
 
             <Button
                 android:id="@+id/btn_add_topic"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Thêm"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:text="Them tag"
                 android:textAllCaps="false" />
         </LinearLayout>
 
-        <!-- Danh sách chủ đề hiện có, được sinh động theo ArrayList -->
-        <ScrollView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxHeight="320dp">
+            android:layout_marginTop="16dp"
+            android:background="@drawable/home_card_bg"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Danh sach tag"
+                android:textColor="#1F2937"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/edt_search_topic"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/home_chip_bg"
+                android:hint="Tim tag"
+                android:inputType="text"
+                android:maxLines="1"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:textColor="#111827"
+                android:textColorHint="#9CA3AF"
+                android:textSize="15sp" />
 
             <LinearLayout
                 android:id="@+id/layout_topic_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:orientation="vertical" />
-        </ScrollView>
 
-        <TextView
-            android:id="@+id/text_topic_empty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:text="Chưa có chủ đề nào. Hãy thêm chủ đề đầu tiên!"
-            android:textColor="#888888"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <TextView
+                android:id="@+id/text_topic_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:padding="18dp"
+                android:text="Chua co tag nao. Hay them tag dau tien."
+                android:textColor="#6B7280"
+                android:textSize="14sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/btn_close_topic_manager"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_marginTop="16dp"
-            android:text="Đóng"
+            android:text="Dong"
             android:textAllCaps="false" />
-
     </LinearLayout>
-</FrameLayout>
+</androidx.core.widget.NestedScrollView>
