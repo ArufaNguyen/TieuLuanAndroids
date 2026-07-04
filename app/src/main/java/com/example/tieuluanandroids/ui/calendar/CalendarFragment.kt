@@ -75,11 +75,15 @@ class CalendarFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         rootView = view
 
-        if (MODE == CalendarSettings.MODE_BOX) {
-            setupBoxMode(view)
-            return
+        when (MODE) {
+            CalendarSettings.MODE_BOX -> setupBoxMode(view)
+            CalendarSettings.MODE_LINE -> setupLineMode(view)
+            else -> setupLineMode(view)
         }
+    }
 
+    // NDA FUNCTION DO NOT TOUCH
+    private fun setupLineMode(view: View) {
         monthTitle = view.findViewById(R.id.text_calendar_month)
         tagFilterSpinner = view.findViewById(R.id.spinner_tag_filter)
         dayHeaders = listOf(
@@ -157,6 +161,7 @@ class CalendarFragment : Fragment() {
         refreshEventsOnOpen()
     }
 
+    // THANG FUNCTION CODE HERE
     private fun setupBoxMode(view: View) {
         updateBoxModeHeader(view)
         duyetQuaCacCotNgay(view)
@@ -383,7 +388,6 @@ class CalendarFragment : Fragment() {
         }
         updateTagFilterOptions()
     }
-
     private fun updateTagFilterOptions() {
         if (!::tagFilterSpinner.isInitialized) return
         val names = (currentTags.map { it.name } + currentEvents.map { it.tagName })
