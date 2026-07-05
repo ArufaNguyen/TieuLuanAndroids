@@ -5,7 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -25,6 +27,10 @@ class ProfileFragment : Fragment() {
     private lateinit var userIdText: TextView
     private lateinit var expiresText: TextView
     private lateinit var loginButton: Button
+    private lateinit var oldPasswordEdit: EditText
+    private lateinit var newPasswordEdit: EditText
+    private lateinit var confirmPasswordEdit: EditText
+    private lateinit var changePasswordButton: Button
 
     private val app: SmartCalendarApplication
         get() = requireActivity().application as SmartCalendarApplication
@@ -46,9 +52,16 @@ class ProfileFragment : Fragment() {
         userIdText = view.findViewById(R.id.text_profile_user_id)
         expiresText = view.findViewById(R.id.text_profile_expires)
         loginButton = view.findViewById(R.id.button_profile_login)
+        oldPasswordEdit = view.findViewById(R.id.edit_profile_old_password)
+        newPasswordEdit = view.findViewById(R.id.edit_profile_new_password)
+        confirmPasswordEdit = view.findViewById(R.id.edit_profile_confirm_password)
+        changePasswordButton = view.findViewById(R.id.button_profile_change_password)
 
         loginButton.setOnClickListener {
             findNavController().navigate(R.id.LoginFragment)
+        }
+        changePasswordButton.setOnClickListener {
+            changePassword()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -67,6 +80,8 @@ class ProfileFragment : Fragment() {
             userIdText.text = "-"
             expiresText.text = "-"
             loginButton.visibility = View.VISIBLE
+            setPasswordFormEnabled(false)
+            clearPasswordInputs()
             return
         }
 
@@ -77,5 +92,53 @@ class ProfileFragment : Fragment() {
         userIdText.text = "userId=${session.userId}, accountId=${session.accountId}"
         expiresText.text = session.expiresAt
         loginButton.visibility = View.GONE
+        setPasswordFormEnabled(true)
+    }
+
+    private fun changePassword() {
+        val oldPassword = oldPasswordEdit.text?.toString().orEmpty()
+        val newPassword = newPasswordEdit.text?.toString().orEmpty()
+        val confirmPassword = confirmPasswordEdit.text?.toString().orEmpty()
+
+        when {
+            oldPassword.isBlank() -> {
+                oldPasswordEdit.error = "Nhap mat khau cu"
+                oldPasswordEdit.requestFocus()
+                return
+            }
+            newPassword.isBlank() -> {
+                newPasswordEdit.error = "Nhap mat khau moi"
+                newPasswordEdit.requestFocus()
+                return
+            }
+            confirmPassword != newPassword -> {
+                confirmPasswordEdit.error = "Mat khau moi khong khop"
+                confirmPasswordEdit.requestFocus()
+                return
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            setPasswordFormEnabled(false)
+            val result = app.data.changePassword(oldPassword, newPassword)
+            Toast.makeText(requireContext(), result.message, Toast.LENGTH_SHORT).show()
+            if (result.success) {
+                clearPasswordInputs()
+            }
+            setPasswordFormEnabled(true)
+        }
+    }
+
+    private fun setPasswordFormEnabled(enabled: Boolean) {
+        oldPasswordEdit.isEnabled = enabled
+        newPasswordEdit.isEnabled = enabled
+        confirmPasswordEdit.isEnabled = enabled
+        changePasswordButton.isEnabled = enabled
+    }
+
+    private fun clearPasswordInputs() {
+        oldPasswordEdit.text?.clear()
+        newPasswordEdit.text?.clear()
+        confirmPasswordEdit.text?.clear()
     }
 }
