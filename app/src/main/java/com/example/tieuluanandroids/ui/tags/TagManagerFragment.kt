@@ -222,7 +222,7 @@ class TagManagerFragment : Fragment() {
     private fun buildMetaText(tag: Tag): String {
         val parts = mutableListOf<String>()
         parts += tag.color?.takeIf { it.isNotBlank() } ?: DEFAULT_COLOR
-        if (tag.syncStatus.name != "SYNCED") parts += tag.syncStatus.name
+        if (!tag.isSynced) parts += tag.syncStatus.name
         return parts.joinToString("  |  ")
     }
 

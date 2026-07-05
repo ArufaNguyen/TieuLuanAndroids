@@ -9,7 +9,10 @@ data class Tag(
     val syncStatus: SyncStatus,
     val updatedAt: Long,
     val deletedAt: Long?
-)
+) {
+    val isSynced: Boolean
+        get() = syncStatus == SyncStatus.SYNCED
+}
 
 data class CreateTagInput(val name: String, val color: String? = null, val ownerId: String? = null)
 

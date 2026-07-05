@@ -14,7 +14,10 @@ data class Event(
     val syncStatus: SyncStatus,
     val updatedAt: Long,
     val deletedAt: Long?
-)
+) {
+    val isSynced: Boolean
+        get() = syncStatus == SyncStatus.SYNCED
+}
 
 data class CreateEventInput(
     val title: String,
