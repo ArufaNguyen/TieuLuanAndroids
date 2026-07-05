@@ -335,3 +335,6 @@ Chạy test reverse API endpoint:
 - Các layout chính nằm trong `app/src/main/res/layout`.
 - Các route chính nằm trong `app/src/main/res/navigation/nav_graph.xml`.
 - Các item drawer nằm trong `app/src/main/res/menu/drawer_menu.xml`.
+
+## Project link
+ - https://github.com/ArufaNguyen/TieuLuanAndroids
