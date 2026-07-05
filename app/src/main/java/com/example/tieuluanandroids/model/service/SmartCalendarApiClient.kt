@@ -114,6 +114,52 @@ object SmartCalendarApiClient {
         }
     }
 
+    fun changePassword(
+        accountId: Int,
+        userId: Int,
+        username: String,
+        loginName: String?,
+        oldPassword: String,
+        newPassword: String
+    ): ApiResult {
+        return try {
+            val normalizedLoginName = loginName?.takeIf { it.isNotBlank() } ?: username
+            val loginResult = login(normalizedLoginName, oldPassword)
+            if (!loginResult.success) {
+                return ApiResult(false, "Mat khau cu khong dung")
+            }
+
+            val payload = JSONObject()
+                .put("username", username)
+                .put("loginName", loginName)
+                .put("password", newPassword)
+                .put("userId", userId)
+                .toString()
+            val request = Request.Builder()
+                .url("${fetchBaseUrl()}/api/v1/accounts/$accountId")
+                .put(payload.toRequestBody(jsonMediaType))
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return ApiResult(false, "HTTP ${response.code}: $responseBody")
+                }
+
+                val json = JSONObject(responseBody)
+                val code = json.optInt("code", response.code)
+                val message = json.optString("message", "Password changed")
+                if (code in 200..299) {
+                    ApiResult(true, message)
+                } else {
+                    ApiResult(false, message)
+                }
+            }
+        } catch (error: Exception) {
+            ApiResult(false, error.message ?: "Cannot change password")
+        }
+    }
+
     fun getRemoteEvents(token: String): RemoteListResult<RemoteEvent> {
         return try {
             val baseUrl = fetchBaseUrl()

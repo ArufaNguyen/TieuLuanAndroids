@@ -36,6 +36,19 @@ class SmartCalendarRemoteDataSource(
         SmartCalendarApiClient.checkBackendDevMode(credentials.token)
     }
 
+    suspend fun changePassword(oldPassword: String, newPassword: String) = withContext(ioDispatcher) {
+        val credentials = sessionManager.getCredentials()
+            ?: return@withContext ApiResult(false, "Login is required")
+        SmartCalendarApiClient.changePassword(
+            accountId = credentials.accountId,
+            userId = credentials.userId,
+            username = credentials.username,
+            loginName = credentials.loginName,
+            oldPassword = oldPassword,
+            newPassword = newPassword
+        )
+    }
+
     suspend fun uploadHar(fileName: String, bytes: ByteArray) = withContext(ioDispatcher) {
         val credentials = sessionManager.getCredentials()
             ?: return@withContext ApiResult(false, "Login is required")

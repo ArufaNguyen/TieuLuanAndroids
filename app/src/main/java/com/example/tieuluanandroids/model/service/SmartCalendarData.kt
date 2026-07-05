@@ -94,6 +94,9 @@ class SmartCalendarData(
 
     suspend fun checkBackendDevMode() = remoteDataSource.checkBackendDevMode()
 
+    suspend fun changePassword(oldPassword: String, newPassword: String) =
+        remoteDataSource.changePassword(oldPassword, newPassword)
+
     suspend fun uploadHar(fileName: String, bytes: ByteArray) =
         remoteDataSource.uploadHar(fileName, bytes)
 
