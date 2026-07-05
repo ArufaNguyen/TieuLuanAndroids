@@ -13,7 +13,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.RadioGroup
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
 class TagManagerFragment : Fragment() {
 
     private lateinit var nameInput: EditText
-    private lateinit var colorGroup: RadioGroup
+    private lateinit var colorPreview: View
+    private lateinit var colorPickerButton: Button
     private lateinit var colorHexInput: EditText
     private lateinit var saveButton: Button
     private lateinit var searchInput: EditText
@@ -58,7 +59,8 @@ class TagManagerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         nameInput = view.findViewById(R.id.edt_new_topic)
-        colorGroup = view.findViewById(R.id.radio_tag_color_group)
+        colorPreview = view.findViewById(R.id.view_tag_color_preview)
+        colorPickerButton = view.findViewById(R.id.btn_pick_tag_color)
         colorHexInput = view.findViewById(R.id.edt_tag_color_hex)
         saveButton = view.findViewById(R.id.btn_add_topic)
         searchInput = view.findViewById(R.id.edt_search_topic)
@@ -66,12 +68,18 @@ class TagManagerFragment : Fragment() {
         emptyText = view.findViewById(R.id.text_topic_empty)
         closeButton = view.findViewById(R.id.btn_close_topic_manager)
 
-        colorGroup.setOnCheckedChangeListener { _, checkedId ->
-            colorHexInput.setText(colorForCheckedId(checkedId))
-        }
         if (colorHexInput.text.isBlank()) {
-            colorHexInput.setText(colorForCheckedId(colorGroup.checkedRadioButtonId))
+            colorHexInput.setText(DEFAULT_COLOR)
         }
+        updateColorPreview(colorHexInput.text.toString())
+        colorPickerButton.setOnClickListener { showColorPicker() }
+        colorHexInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateColorPreview(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
         saveButton.setOnClickListener { saveTag() }
         closeButton.setOnClickListener { requireActivity().onBackPressedDispatcher.onBackPressed() }
         searchInput.addTextChangedListener(object : TextWatcher {
@@ -133,7 +141,7 @@ class TagManagerFragment : Fragment() {
     private fun editTag(tag: Tag) {
         editingTag = tag
         nameInput.setText(tag.name)
-        colorHexInput.setText(tag.color?.takeIf { it.isNotBlank() } ?: DEFAULT_COLOR)
+        setSelectedColor(tag.color?.takeIf { it.isNotBlank() } ?: DEFAULT_COLOR)
         saveButton.text = "Cap nhat tag"
     }
 
@@ -215,7 +223,7 @@ class TagManagerFragment : Fragment() {
     private fun clearEditor() {
         editingTag = null
         nameInput.text?.clear()
-        colorHexInput.setText(colorForCheckedId(colorGroup.checkedRadioButtonId))
+        setSelectedColor(DEFAULT_COLOR)
         saveButton.text = "Them tag"
     }
 
@@ -226,17 +234,104 @@ class TagManagerFragment : Fragment() {
         return parts.joinToString("  |  ")
     }
 
-    private fun colorForCheckedId(checkedId: Int): String = when (checkedId) {
-        R.id.radio_tag_color_green -> "#059669"
-        R.id.radio_tag_color_orange -> "#D97706"
-        else -> DEFAULT_COLOR
-    }
-
     private fun normalizeColor(value: String): String? {
         val trimmed = value.trim().ifBlank { return null }
         val normalized = if (trimmed.startsWith("#")) trimmed else "#$trimmed"
         return normalized.takeIf { runCatching { Color.parseColor(it) }.isSuccess }
     }
+
+    private fun showColorPicker() {
+        val initialColor = parseTagColor(colorHexInput.text.toString())
+        var red = Color.red(initialColor)
+        var green = Color.green(initialColor)
+        var blue = Color.blue(initialColor)
+
+        val content = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), 0)
+        }
+        val dialogPreview = View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(44)
+            ).apply { bottomMargin = dp(12) }
+        }
+        val hexText = TextView(requireContext()).apply {
+            textSize = 14f
+            setTextColor(Color.rgb(17, 24, 39))
+            gravity = Gravity.CENTER
+        }
+        fun renderDialogColor() {
+            val color = Color.rgb(red, green, blue)
+            dialogPreview.background = colorDrawable(color)
+            hexText.text = colorToHex(color)
+        }
+
+        content.addView(dialogPreview)
+        content.addView(hexText)
+        content.addView(colorSlider("R", red) { red = it; renderDialogColor() })
+        content.addView(colorSlider("G", green) { green = it; renderDialogColor() })
+        content.addView(colorSlider("B", blue) { blue = it; renderDialogColor() })
+        renderDialogColor()
+
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Chon mau tag")
+            .setView(content)
+            .setNegativeButton("Huy", null)
+            .setPositiveButton("Chon") { _, _ ->
+                setSelectedColor(colorToHex(Color.rgb(red, green, blue)))
+            }
+            .show()
+    }
+
+    private fun colorSlider(label: String, value: Int, onChange: (Int) -> Unit): View {
+        return LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(8), 0, 0)
+
+            addView(TextView(context).apply {
+                text = label
+                textSize = 14f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(Color.rgb(17, 24, 39))
+            }, LinearLayout.LayoutParams(dp(24), LinearLayout.LayoutParams.WRAP_CONTENT))
+
+            addView(SeekBar(context).apply {
+                max = 255
+                progress = value
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        onChange(progress)
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+                })
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        }
+    }
+
+    private fun setSelectedColor(color: String) {
+        val normalized = normalizeColor(color) ?: DEFAULT_COLOR
+        colorHexInput.setText(normalized)
+        updateColorPreview(normalized)
+    }
+
+    private fun updateColorPreview(value: String) {
+        if (!::colorPreview.isInitialized) return
+        colorPreview.background = colorDrawable(parseTagColor(value))
+    }
+
+    private fun colorDrawable(color: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(8).toFloat()
+            setStroke(dp(1), Color.rgb(209, 213, 219))
+        }
+    }
+
+    private fun colorToHex(color: Int): String =
+        String.format("#%06X", 0xFFFFFF and color)
 
     private fun parseTagColor(value: String?): Int {
         return runCatching { Color.parseColor(value ?: DEFAULT_COLOR) }
