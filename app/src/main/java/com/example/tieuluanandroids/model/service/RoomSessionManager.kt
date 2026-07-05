@@ -9,7 +9,10 @@ import kotlinx.coroutines.flow.map
 
 data class SessionCredentials(
     val token: String,
-    val userId: Int
+    val accountId: Int,
+    val userId: Int,
+    val username: String,
+    val loginName: String?
 )
 
 class RoomSessionManager(
@@ -25,7 +28,10 @@ class RoomSessionManager(
         val storedSession = sessionDao.get() ?: return null
         return SessionCredentials(
             token = storedSession.sessionToken,
-            userId = storedSession.userId
+            accountId = storedSession.accountId,
+            userId = storedSession.userId,
+            username = storedSession.username,
+            loginName = storedSession.loginName
         )
     }
 
