@@ -1,6 +1,30 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Local secrets
+.env
+**/.env
+
+# Gradle/build output in nested modules
+**/.gradle/
+**/.kotlin/
+**/build/
+**/bin/
+
 .agents
 .gitnexus
-.gradle
 .idea
-.kotlin
 .tools
