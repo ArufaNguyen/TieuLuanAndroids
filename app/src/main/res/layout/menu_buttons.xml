@@ -227,6 +227,7 @@
                 </GridLayout>
 
                 <LinearLayout
+                    android:id="@+id/layout_home_tag_legend"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -323,15 +324,16 @@
 
             <TextView
                 style="@style/HomePanelTitle"
-                android:text="Tien do hoc tap" />
+                android:text="Tien do lich thang" />
 
             <TextView
+                android:id="@+id/text_home_month_progress"
                 android:layout_width="108dp"
                 android:layout_height="108dp"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/home_avatar_bg"
                 android:gravity="center"
-                android:text="56/120"
+                android:text="0/0"
                 android:textColor="#2563EB"
                 android:textSize="18sp"
                 android:textStyle="bold" />

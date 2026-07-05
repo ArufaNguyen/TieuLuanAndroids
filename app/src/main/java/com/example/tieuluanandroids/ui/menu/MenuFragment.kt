@@ -1,7 +1,12 @@
 package com.example.tieuluanandroids.ui.menu
 
 import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +23,7 @@ import com.example.tieuluanandroids.R
 import com.example.tieuluanandroids.SmartCalendarApplication
 import com.example.tieuluanandroids.model.Event
 import com.example.tieuluanandroids.model.SessionInfo
+import com.example.tieuluanandroids.model.Tag
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -39,12 +45,15 @@ class MenuFragment : Fragment() {
     private lateinit var sessionText: TextView
     private lateinit var monthCountText: TextView
     private lateinit var weekCountText: TextView
+    private lateinit var monthProgressText: TextView
     private lateinit var calendarTitle: TextView
     private lateinit var calendarMonth: TextView
     private lateinit var todaySummary: TextView
+    private lateinit var tagLegendLayout: LinearLayout
     private lateinit var dayCells: List<TextView>
     private val homeMonth: Calendar = Calendar.getInstance().apply { resetTime() }
     private var currentHomeEvents: List<Event> = emptyList()
+    private var currentHomeTags: List<Tag> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -70,9 +79,11 @@ class MenuFragment : Fragment() {
         sessionText = view.findViewById(R.id.text_home_session)
         monthCountText = view.findViewById(R.id.text_home_month_count)
         weekCountText = view.findViewById(R.id.text_home_week_count)
+        monthProgressText = view.findViewById(R.id.text_home_month_progress)
         calendarTitle = view.findViewById(R.id.text_home_calendar_title)
         calendarMonth = view.findViewById(R.id.text_home_calendar_month)
         todaySummary = view.findViewById(R.id.text_home_today_summary)
+        tagLegendLayout = view.findViewById(R.id.layout_home_tag_legend)
         dayCells = listOf(
             view.findViewById(R.id.home_day_0),
             view.findViewById(R.id.home_day_1),
@@ -198,6 +209,14 @@ class MenuFragment : Fragment() {
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                app.data.observeTags().collect { tags ->
+                    currentHomeTags = tags
+                    renderHome(currentHomeEvents)
+                }
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
             app.data.syncNow()
         }
     }
@@ -223,9 +242,11 @@ class MenuFragment : Fragment() {
         val gridStart = (monthStart.clone() as Calendar).apply { moveToWeekStart() }
         val monthKey = SimpleDateFormat("MM/yyyy", Locale.US).format(monthStart.time)
         val eventsByDate = events.groupBy { event -> parseBackendTime(event.startTime)?.let(::dateKey) }
-        val monthEventCount = events.count { event ->
+        val monthEvents = events.filter { event ->
             parseBackendTime(event.startTime)?.let { sameMonth(it, monthStart) } == true
         }
+        val monthEventCount = monthEvents.size
+        val monthPassedCount = monthEvents.count { event -> eventHasPassed(event, Calendar.getInstance()) }
         val weekStart = (today.clone() as Calendar).apply { moveToWeekStart() }
         val weekEnd = (weekStart.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 7) }
         val weekEventCount = events.count { event ->
@@ -237,11 +258,13 @@ class MenuFragment : Fragment() {
         calendarMonth.text = monthKey
         monthCountText.text = "Lich thang nay: $monthEventCount lich"
         weekCountText.text = "Lich tuan nay: $weekEventCount lich"
+        monthProgressText.text = "$monthPassedCount/$monthEventCount"
         todaySummary.text = if (todayEvents.isEmpty()) {
             "Hom nay: chua co lich"
         } else {
             "Hom nay: ${todayEvents.size} lich - ${todayEvents.take(2).joinToString { it.title }}"
         }
+        renderTagLegend(monthEvents)
 
         dayCells.forEachIndexed { index, cell ->
             val day = (gridStart.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, index) }
@@ -253,11 +276,7 @@ class MenuFragment : Fragment() {
             val isWeekend = day.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
                 day.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
 
-            cell.text = if (eventCount > 0) {
-                "${day.get(Calendar.DAY_OF_MONTH)}\n$eventCount lich"
-            } else {
-                day.get(Calendar.DAY_OF_MONTH).toString()
-            }
+            cell.text = buildDayCellText(day.get(Calendar.DAY_OF_MONTH), dayEvents)
             cell.setBackgroundResource(if (isToday) R.drawable.home_day_active_bg else R.drawable.home_day_bg)
             cell.setTextColor(
                 when {
@@ -382,6 +401,102 @@ class MenuFragment : Fragment() {
             start != null && end != null -> "${formatter.format(start.time)} - ${formatter.format(end.time)}"
             start != null -> formatter.format(start.time)
             else -> "-"
+        }
+    }
+
+    private fun eventHasPassed(event: Event, now: Calendar): Boolean {
+        val finishTime = parseBackendTime(event.endTime) ?: parseBackendTime(event.startTime)
+        return finishTime?.after(now) == false
+    }
+
+    private fun buildDayCellText(dayOfMonth: Int, events: List<Event>): CharSequence {
+        if (events.isEmpty()) return dayOfMonth.toString()
+        if (events.size >= 4) return "$dayOfMonth\n${events.size} lich"
+
+        val dots = events.joinToString(" ") { "●" }
+        val text = "$dayOfMonth\n$dots"
+        return SpannableString(text).apply {
+            var dotIndex = text.indexOf('●')
+            events.forEach { event ->
+                if (dotIndex >= 0) {
+                    setSpan(
+                        ForegroundColorSpan(tagColor(event)),
+                        dotIndex,
+                        dotIndex + 1,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    dotIndex = text.indexOf('●', dotIndex + 1)
+                }
+            }
+        }
+    }
+
+    private fun renderTagLegend(monthEvents: List<Event>) {
+        tagLegendLayout.removeAllViews()
+        val tags = monthEvents
+            .mapNotNull(::tagForEvent)
+            .distinctBy { it.localId }
+            .take(4)
+
+        if (tags.isEmpty()) {
+            addLegendItem("Chua co tag", Color.parseColor("#9CA3AF"))
+            return
+        }
+
+        tags.forEach { tag ->
+            addLegendItem(tag.name, parseTagColor(tag.color, fallbackTagColor(tag.name)))
+        }
+    }
+
+    private fun addLegendItem(name: String, color: Int) {
+        val dot = View(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(7), dp(7)).apply {
+                marginStart = dp(8)
+            }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(color)
+            }
+        }
+        val label = TextView(requireContext()).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginStart = dp(6)
+            }
+            text = name
+            setTextColor(Color.parseColor("#6B7280"))
+            textSize = 12f
+        }
+        tagLegendLayout.addView(dot)
+        tagLegendLayout.addView(label)
+    }
+
+    private fun tagForEvent(event: Event): Tag? {
+        return currentHomeTags.firstOrNull { tag ->
+            tag.localId == event.tagLocalId ||
+                tag.name.equals(event.tagName, ignoreCase = true)
+        }
+    }
+
+    private fun tagColor(event: Event): Int {
+        val tag = tagForEvent(event)
+        return parseTagColor(tag?.color, fallbackTagColor(event.tagName))
+    }
+
+    private fun parseTagColor(value: String?, fallback: Int): Int {
+        return runCatching {
+            Color.parseColor(value?.takeIf { it.isNotBlank() } ?: return fallback)
+        }.getOrDefault(fallback)
+    }
+
+    private fun fallbackTagColor(tagName: String): Int {
+        return when (tagName.lowercase(Locale.US)) {
+            "hoc", "lich hoc", "study" -> Color.parseColor("#2563EB")
+            "thi", "lich thi" -> Color.parseColor("#D97706")
+            "su kien", "event" -> Color.parseColor("#059669")
+            else -> Color.parseColor("#6B7280")
         }
     }
 
