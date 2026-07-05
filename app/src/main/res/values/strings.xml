@@ -16,7 +16,7 @@
     <string name="login_password">Password</string>
     <string name="login_button">Login</string>
     <string name="login_loading">Logging in...</string>
-    <string name="login_dev_skip">Continue in dev mode</string>
+    <string name="login_dev_skip">Register</string>
     <string name="login_missing_fields">Username and password are required.</string>
     <string name="login_api_not_connected">Login API is not connected yet.</string>
 

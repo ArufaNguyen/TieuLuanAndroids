@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SmartCalendarData(
@@ -86,6 +87,19 @@ class SmartCalendarData(
     suspend fun login(username: String, password: String) =
         remoteDataSource.login(username, password).also { loginResult ->
             if (loginResult.success) {
+                syncManager.enqueue()
+            }
+        }
+
+    suspend fun register(username: String, password: String) =
+        remoteDataSource.register(
+            username = username,
+            email = "${username.lowercase(Locale.US)}@smartcalendar.local",
+            fullName = username,
+            loginName = username,
+            password = password
+        ).also { registerResult ->
+            if (registerResult.success) {
                 syncManager.enqueue()
             }
         }

@@ -47,8 +47,9 @@
                 android:id="@+id/btn_manage_topics"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:textColor="@color/black"
                 android:layout_marginStart="8dp"
-                android:text="+" />
+                android:text="New Tag" />
         </LinearLayout>
         <EditText
             android:id="@+id/edt_event_content"
@@ -75,6 +76,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textSize="16sp"
+                    android:textColor="@color/black"
+
                     android:text="Chọn thời gian bắt đầu" />
                 <Button
                     android:id="@+id/btn_time_end"
@@ -83,6 +86,8 @@
                     android:layout_weight="1"
                     android:textSize="16sp"
                     android:text="Chọn thời gian kết thúc"
+                    android:textColor="@color/black"
+
                     android:layout_marginStart="8dp"/>
             </LinearLayout>
         </LinearLayout>
@@ -97,7 +102,10 @@
                 android:layout_weight="1"
                 android:textSize="18sp"
                 android:textStyle="bold"
+                android:textColor="@color/black"
+
                 android:text="Lưu sự kiện" />
+
             <Button
                 android:id="@+id/btn_edit_event"
                 android:layout_width="0dp"
@@ -107,8 +115,21 @@
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:text="Sửa lịch"
+                android:textColor="@color/black"
+
                 android:visibility="gone" />
         </LinearLayout>
+        <Button
+            android:id="@+id/btn_add_new_event"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#2ECC71"
+            android:text="Them moi su kien"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
         <Button
             android:id="@+id/btn_delete_event"
             android:layout_width="match_parent"

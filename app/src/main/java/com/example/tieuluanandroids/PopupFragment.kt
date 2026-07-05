@@ -19,6 +19,7 @@ import com.example.tieuluanandroids.model.AppResult
 import com.example.tieuluanandroids.model.CreateTagInput
 import com.example.tieuluanandroids.model.service.SmartCalendarData
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -32,6 +33,7 @@ class PopupFragment : BottomSheetDialogFragment() {
     private lateinit var saveButton: Button
     private lateinit var editButton: Button
     private lateinit var deleteButton: Button
+    private lateinit var addNewEventButton: Button
     private lateinit var adapter: ArrayAdapter<String>
 
     private val topicList = ArrayList<String>()
@@ -59,6 +61,7 @@ class PopupFragment : BottomSheetDialogFragment() {
         saveButton = view.findViewById(R.id.btn_save_event)
         editButton = view.findViewById(R.id.btn_edit_event)
         deleteButton = view.findViewById(R.id.btn_delete_event)
+        addNewEventButton = view.findViewById(R.id.btn_add_new_event)
 
         val selectedDay = arguments?.getString("KEY_THU") ?: "Monday"
         val selectedTime = normalizeInitialTime(arguments?.getString("KEY_GIO"))
@@ -75,6 +78,8 @@ class PopupFragment : BottomSheetDialogFragment() {
         val initialTopic = arguments?.getString("KEY_TOPIC")
         val isEditMode = arguments?.containsKey("EDIT_NOI_DUNG") == true
 
+        addNewEventButton.visibility = if (isEditMode) View.VISIBLE else View.GONE
+
         setTopics(tagNames, tagLocalIds)
         textTitle.text = if (eventLocalId == null && !isEditMode) {
             "Them su kien ngay $selectedDay"
@@ -84,8 +89,19 @@ class PopupFragment : BottomSheetDialogFragment() {
         startTimeButton.text = if (isEditMode) arguments?.getString("EDIT_BAT_DAU") else selectedTime
         endTimeButton.text = if (isEditMode) arguments?.getString("EDIT_KET_THUC") else selectedEndTime
 
-        adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, topicList)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        adapter = object : ArrayAdapter<String>(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            topicList
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                (view as? TextView)?.setTextColor(android.graphics.Color.BLACK)
+                return view
+            }
+        }.apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
         spinnerTopic.adapter = adapter
 
         selectTopic(initialTopic)
@@ -103,9 +119,10 @@ class PopupFragment : BottomSheetDialogFragment() {
         btnManageTopics.setOnClickListener { showCreateTagDialog() }
         startTimeButton.setOnClickListener { showTimePicker(startTimeButton) }
         endTimeButton.setOnClickListener { showTimePicker(endTimeButton) }
-        saveButton.setOnClickListener { saveEvent(selectedDay, eventLocalId) }
-        editButton.setOnClickListener { editLegacyEvent(selectedDay) }
+        saveButton.setOnClickListener { handleSmartSave(selectedDay, eventLocalId) }
+        editButton.setOnClickListener { handleSmartSave(selectedDay, eventLocalId) }
         deleteButton.setOnClickListener { deleteEvent(selectedDay, eventLocalId) }
+        addNewEventButton.setOnClickListener { handleSmartSave(selectedDay, null) }
 
         observeTags()
     }
@@ -296,5 +313,71 @@ class PopupFragment : BottomSheetDialogFragment() {
         val prefix = topics.firstOrNull { title.startsWith("$it:", ignoreCase = true) }
             ?: return title
         return title.drop(prefix.length + 1).trim()
+    }
+
+    private fun handleSmartSave(day: String, targetId: String?) {
+        val content = editText.text.toString().trim()
+        if (content.isEmpty()) {
+            Toast.makeText(requireContext(), "Vui long nhap noi dung!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val startTime = startTimeButton.text.toString()
+        val endTime = endTimeButton.text.toString()
+        val startMin = timeToMinute(startTime, 8)
+        val endMin = timeToMinute(endTime, 9)
+        if (endMin <= startMin) {
+            Toast.makeText(requireContext(), "Gio ket thuc phai sau gio bat dau!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val hasOverlap = data.observeEvents().first().any { event ->
+                if (event.localId == targetId) return@any false
+                if (!weekdayNameFromBackend(event.startTime).equals(day, ignoreCase = true)) return@any false
+
+                val eventStartMin = timeToMinute(event.startTime.substringAfter("T"), 0)
+                val eventEndMin = timeToMinute(event.endTime.substringAfter("T"), eventStartMin / 60)
+                startMin < eventEndMin && endMin > eventStartMin
+            }
+
+            if (hasOverlap) {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Canh bao trung lich")
+                    .setMessage("Khung thoi gian nay dang co hoat dong. Ban co muon tiep tuc khong?")
+                    .setPositiveButton("Co") { _, _ -> saveEvent(day, targetId) }
+                    .setNegativeButton("Khong", null)
+                    .show()
+            } else {
+                saveEvent(day, targetId)
+            }
+        }
+    }
+
+    private fun timeToMinute(value: String, defaultHour: Int): Int {
+        val parts = value.split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: defaultHour
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        return hour.coerceIn(0, 23) * 60 + minute.coerceIn(0, 59)
+    }
+
+    private fun weekdayNameFromBackend(dateStr: String): String {
+        return try {
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            val date = sdf.parse(dateStr) ?: return "Monday"
+            val cal = Calendar.getInstance().apply { time = date }
+            when (cal.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.MONDAY -> "Monday"
+                Calendar.TUESDAY -> "Tuesday"
+                Calendar.WEDNESDAY -> "Wednesday"
+                Calendar.THURSDAY -> "Thursday"
+                Calendar.FRIDAY -> "Friday"
+                Calendar.SATURDAY -> "Saturday"
+                Calendar.SUNDAY -> "Sunday"
+                else -> "Monday"
+            }
+        } catch (_: Exception) {
+            "Monday"
+        }
     }
 }

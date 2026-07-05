@@ -26,6 +26,22 @@ class SmartCalendarRemoteDataSource(
         ApiResult(result.success, result.message)
     }
 
+    suspend fun register(
+        username: String,
+        email: String,
+        fullName: String?,
+        loginName: String?,
+        password: String
+    ) = withContext(ioDispatcher) {
+        val result = SmartCalendarApiClient.register(username, email, fullName, loginName, password)
+        val token = result.token
+        val session = result.session
+        if (result.success && token != null && session != null) {
+            sessionManager.save(token, session)
+        }
+        ApiResult(result.success, result.message)
+    }
+
     suspend fun enableDevMode() = withContext(ioDispatcher) {
         SmartCalendarApiClient.enableDevMode()
     }

@@ -85,6 +85,60 @@ object SmartCalendarApiClient {
         LoginApiResult(false, error.message ?: "Network error")
     }
 
+    fun register(
+        username: String,
+        email: String,
+        fullName: String?,
+        loginName: String?,
+        password: String
+    ): LoginApiResult = try {
+        val payload = JSONObject()
+            .put("username", username)
+            .put("email", email)
+            .put("fullName", fullName?.takeIf { it.isNotBlank() } ?: username)
+            .put("loginName", loginName?.takeIf { it.isNotBlank() } ?: username)
+            .put("password", password)
+            .toString()
+        val request = Request.Builder()
+            .url("${fetchBaseUrl()}/api/v1/auth/register")
+            .post(payload.toRequestBody(jsonMediaType))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val responseBody = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                return LoginApiResult(false, "HTTP ${response.code}: $responseBody")
+            }
+            val json = JSONObject(responseBody)
+            val message = json.optString("message", "unknown response")
+            if (json.optInt("code", response.code) != 201) {
+                return LoginApiResult(false, message)
+            }
+            val body = json.optJSONObject("body")
+                ?: return LoginApiResult(false, "Register response has no body")
+            val token = body.optString("sessionToken")
+            if (token.isBlank()) return LoginApiResult(false, "Register response has no session token")
+
+            devMode = false
+            LoginApiResult(
+                success = true,
+                message = "Register success",
+                token = token,
+                session = SessionInfo(
+                    accountId = body.optInt("accountId"),
+                    userId = body.optInt("userId"),
+                    username = body.optString("username"),
+                    loginName = body.nullableString("loginName"),
+                    email = body.optString("email"),
+                    fullName = body.nullableString("fullName"),
+                    expiresAt = body.optString("expiresAt")
+                )
+            )
+        }
+    } catch (error: Exception) {
+        LoginApiResult(false, error.message ?: "Network error")
+    }
+
     fun enableDevMode() {
         devMode = true
     }

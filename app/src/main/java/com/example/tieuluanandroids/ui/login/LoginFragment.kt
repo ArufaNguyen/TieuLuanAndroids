@@ -47,7 +47,9 @@ class LoginFragment : Fragment() {
             login(username, password)
         }
         buttonDevSkip.setOnClickListener {
-            continueInDevMode()
+            val username = editTextUsername.text?.toString()?.trim().orEmpty()
+            val password = editTextPassword.text?.toString()?.trim().orEmpty()
+            register(username, password)
         }
     }
 
@@ -61,6 +63,24 @@ class LoginFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             setLoading(true)
             val result = data.login(username, password)
+            setLoading(false)
+            showMessage(result.message, Snackbar.LENGTH_LONG)
+            if (result.success) {
+                findNavController().navigate(R.id.action_LoginFragment_to_EventsFragment)
+            }
+        }
+    }
+
+    private fun register(username: String, password: String) {
+        if (username.isBlank() || password.isBlank()) {
+            showMessage(getString(R.string.login_missing_fields), Snackbar.LENGTH_SHORT)
+            return
+        }
+        if (isLoading) return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            setLoading(true)
+            val result = data.register(username, password)
             setLoading(false)
             showMessage(result.message, Snackbar.LENGTH_LONG)
             if (result.success) {
