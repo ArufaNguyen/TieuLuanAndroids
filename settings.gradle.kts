@@ -24,15 +24,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "TieuLuanAndroids"
 include(":app")
-
-val backendDir = file("backend/SmartCalendarAPI")
-if (backendDir.exists()) {
-    include(":backend")
-    project(":backend").projectDir = backendDir
-}
-
-val tunnelPublisherDir = file("tunnel-url-publisher")
-if (tunnelPublisherDir.exists()) {
-    include(":tunnel-url-publisher")
-    project(":tunnel-url-publisher").projectDir = tunnelPublisherDir
-}

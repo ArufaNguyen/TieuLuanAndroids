@@ -24,5 +24,7 @@ local.properties
 **/build/
 **/bin/
 
-backend
-tunnel-url-publisher
+.agents
+.gitnexus
+.idea
+.tools
