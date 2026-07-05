@@ -6,7 +6,7 @@
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+/.idea/markdown.xml
 .DS_Store
 /build
 /captures
@@ -23,8 +23,12 @@ local.properties
 **/.kotlin/
 **/build/
 **/bin/
+**/node_modules/
+**/.wrangler/
 
 .agents
 .gitnexus
 .idea
 .tools
+/stuff/
+/.claude/

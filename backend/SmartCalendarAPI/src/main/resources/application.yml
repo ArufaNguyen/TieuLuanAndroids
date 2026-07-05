@@ -1,0 +1,40 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: ${HAR_MAX_FILE_SIZE:30MB}
+      max-request-size: ${HAR_MAX_FILE_SIZE:30MB}
+
+  datasource:
+    url: jdbc:sqlserver://${DB_HOST}:${DB_PORT};databaseName=${DB_NAME};encrypt=true;trustServerCertificate=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:none}
+
+    show-sql: true
+    open-in-view: false
+
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${SERVER_PORT}
+
+app:
+  hypervisor: ${HYPERVISOR:docker}
+  dev-mode: ${DEV_MODE:false}
+  reverse-api:
+    max-file-size: ${HAR_MAX_FILE_SIZE:30MB}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev-migrate
+  jpa:
+    hibernate:
+      ddl-auto: update
