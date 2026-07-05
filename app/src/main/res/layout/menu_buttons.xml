@@ -12,16 +12,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageButton
-            android:id="@+id/button_drawer"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/home_chip_bg"
-            android:contentDescription="@string/open_navigation_drawer"
-            android:padding="10dp"
-            android:src="@drawable/ic_menu"
-            app:tint="#0066A6" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -51,9 +41,12 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/button_profile_detail"
                         android:layout_width="wrap_content"
                         android:layout_height="34dp"
                         android:background="@drawable/home_chip_bg"
+                        android:clickable="true"
+                        android:focusable="true"
                         android:gravity="center"
                         android:paddingStart="12dp"
                         android:paddingEnd="12dp"

@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.EventsFragment,
                 R.id.TagManagerFragment,
                 R.id.LoginFragment,
+                R.id.ProfileFragment,
                 R.id.AddHarFileFragment,
                 R.id.SessionFragment,
                 R.id.ApiWebViewFragment,

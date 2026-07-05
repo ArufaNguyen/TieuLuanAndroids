@@ -5,6 +5,7 @@
 
     <string name="menu_fragment_label">Menu</string>
     <string name="login_fragment_label">Login</string>
+    <string name="profile_title">Profile</string>
     <string name="events_fragment_label">Events</string>
     <string name="add_har_file_label">Add HAR file</string>
     <string name="tag_manager_title">Tag Manager</string>
@@ -45,6 +46,7 @@
     <string name="drawer_home">Home</string>
     <string name="drawer_calendar">Calendar</string>
     <string name="drawer_login">Login</string>
+    <string name="drawer_profile">Profile</string>
     <string name="drawer_events">Events</string>
     <string name="drawer_tag_manager">Tag Manager</string>
     <string name="drawer_session">Session</string>

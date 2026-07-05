@@ -9,7 +9,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.NumberPicker
 import android.widget.ScrollView
@@ -23,7 +22,6 @@ import com.example.tieuluanandroids.R
 import com.example.tieuluanandroids.SmartCalendarApplication
 import com.example.tieuluanandroids.model.Event
 import com.example.tieuluanandroids.model.SessionInfo
-import com.example.tieuluanandroids.ui.main.MainActivity
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -40,7 +38,7 @@ class MenuFragment : Fragment() {
     private lateinit var buttonAddHarFile: Button
     private lateinit var buttonApiWebView: Button
     private lateinit var buttonAgentChatV2: Button
-    private lateinit var buttonDrawer: ImageButton
+    private lateinit var buttonProfileDetail: TextView
     private lateinit var studentName: TextView
     private lateinit var sessionText: TextView
     private lateinit var monthCountText: TextView
@@ -63,7 +61,6 @@ class MenuFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        buttonDrawer = view.findViewById(R.id.button_drawer)
         buttonLogin = view.findViewById(R.id.button_login)
         buttonViewCalendar2 = view.findViewById(R.id.button_view_calendar2)
         buttonViewCalendar = view.findViewById(R.id.button_view_calendar)
@@ -72,6 +69,7 @@ class MenuFragment : Fragment() {
         buttonAddHarFile = view.findViewById(R.id.button_add_HAR_file)
         buttonApiWebView = view.findViewById(R.id.button_api_webview)
         buttonAgentChatV2 = view.findViewById(R.id.button_agent_chat_v2)
+        buttonProfileDetail = view.findViewById(R.id.button_profile_detail)
         studentName = view.findViewById(R.id.text_home_student_name)
         sessionText = view.findViewById(R.id.text_home_session)
         monthCountText = view.findViewById(R.id.text_home_month_count)
@@ -124,15 +122,15 @@ class MenuFragment : Fragment() {
             view.findViewById(R.id.home_day_41)
         )
 
-        buttonDrawer.setOnClickListener {
-            (requireActivity() as MainActivity).openNavigationDrawer()
-        }
         calendarMonth.setOnClickListener {
             showMonthPicker()
         }
 
         buttonLogin.setOnClickListener {
             findNavController().navigate(R.id.action_MenuFragment_to_LoginFragment)
+        }
+        buttonProfileDetail.setOnClickListener {
+            findNavController().navigate(R.id.action_MenuFragment_to_ProfileFragment)
         }
         buttonViewCalendar2.setOnClickListener {
             findNavController().navigate(R.id.action_MenuFragment_to_CalendarFragment)

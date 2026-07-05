@@ -26,6 +26,11 @@
         android:title="@string/drawer_login" />
 
     <item
+        android:id="@+id/ProfileFragment"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="@string/drawer_profile" />
+
+    <item
         android:id="@+id/AddHarFileFragment"
         android:icon="@android:drawable/ic_menu_upload"
         android:title="@string/add_har_file_label" />

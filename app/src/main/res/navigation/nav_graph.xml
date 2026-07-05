@@ -40,7 +40,17 @@
             android:id="@+id/action_MenuFragment_to_AgentChatV2Fragment"
             app:destination="@id/AgentChatV2Fragment" />
 
+        <action
+            android:id="@+id/action_MenuFragment_to_ProfileFragment"
+            app:destination="@id/ProfileFragment" />
+
     </fragment>
+
+    <fragment
+        android:id="@+id/ProfileFragment"
+        android:name="com.example.tieuluanandroids.ui.profile.ProfileFragment"
+        android:label="@string/profile_title"
+        tools:layout="@layout/fragment_profile" />
 
     <fragment
         android:id="@+id/SessionFragment"
