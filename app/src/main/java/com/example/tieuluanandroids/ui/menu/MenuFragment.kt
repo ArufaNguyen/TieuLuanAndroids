@@ -1,9 +1,6 @@
 package com.example.tieuluanandroids.ui.menu
 
 import android.app.AlertDialog
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.NumberPicker
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -319,106 +315,48 @@ class MenuFragment : Fragment() {
 
     private fun showDayEvents(day: Calendar, events: List<Event>) {
         val dialog = AlertDialog.Builder(requireContext()).create()
-        val root = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(16), dp(20), dp(18))
-        }
-        val header = LinearLayout(requireContext()).apply {
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            orientation = LinearLayout.HORIZONTAL
-        }
-        val title = TextView(requireContext()).apply {
-            text = "Lich ${weekdayName(day)}, ngay ${SimpleDateFormat("dd/MM/yyyy", Locale.US).format(day.time)}"
-            setTextColor(Color.parseColor("#008689"))
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        header.addView(
-            title,
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        )
-        header.addView(
-            TextView(requireContext()).apply {
-                text = "X"
-                setTextColor(Color.parseColor("#008689"))
-                textSize = 18f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = android.view.Gravity.CENTER
-                setOnClickListener { dialog.dismiss() }
-            },
-            LinearLayout.LayoutParams(dp(40), dp(40))
-        )
-        root.addView(header)
-        root.addView(
-            View(requireContext()).apply { setBackgroundColor(Color.parseColor("#E4EAF2")) },
-            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1)).apply {
-                topMargin = dp(8)
-                bottomMargin = dp(12)
-            }
-        )
+        val root = layoutInflater.inflate(R.layout.dialog_day_events, null)
+        val title = root.findViewById<TextView>(R.id.text_day_events_title)
+        val close = root.findViewById<TextView>(R.id.button_day_events_close)
+        val emptyText = root.findViewById<TextView>(R.id.text_day_events_empty)
+        val list = root.findViewById<LinearLayout>(R.id.layout_day_events_list)
 
-        val list = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+        title.text = "Lich ${weekdayName(day)}, ngay ${SimpleDateFormat("dd/MM/yyyy", Locale.US).format(day.time)}"
+        close.setOnClickListener { dialog.dismiss() }
+
         if (events.isEmpty()) {
-            list.addView(
-                TextView(requireContext()).apply {
-                    text = "Ngay nay chua co event."
-                    setTextColor(Color.parseColor("#4B5563"))
-                    textSize = 14f
-                    setPadding(0, dp(16), 0, dp(16))
-                }
-            )
+            emptyText.visibility = View.VISIBLE
         } else {
             events.forEach { event ->
-                list.addView(createEventDetailCard(event))
+                list.addView(createEventDetailCard(event, list, dialog))
             }
         }
-        root.addView(
-            ScrollView(requireContext()).apply { addView(list) },
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
         dialog.setView(root)
         dialog.show()
     }
 
-    private fun createEventDetailCard(event: Event): View {
-        return LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.WHITE)
-                cornerRadius = dp(8).toFloat()
-                setStroke(dp(1), Color.parseColor("#E4EAF2"))
+    private fun createEventDetailCard(event: Event, parent: ViewGroup, dialog: AlertDialog): View {
+        return layoutInflater.inflate(R.layout.item_event_detail, parent, false).apply {
+            findViewById<TextView>(R.id.text_event_detail_title).text = event.title
+            findViewById<TextView>(R.id.text_event_detail_tag).apply {
+                text = "Tag: ${event.tagName.takeIf { it.isNotBlank() && it != "-" } ?: "Su kien"}"
+                setOnClickListener {
+                    dialog.dismiss()
+                    findNavController().navigate(R.id.TagManagerFragment)
+                }
             }
-            setPadding(dp(14), dp(12), dp(14), dp(12))
-            addView(TextView(context).apply {
-                text = event.title
-                setTextColor(Color.parseColor("#111827"))
-                textSize = 16f
-                typeface = Typeface.DEFAULT_BOLD
-            })
-            addView(detailLine("Phong:", event.description?.takeIf { it.isNotBlank() } ?: "-"))
-            addView(detailLine("Thoi gian:", formatEventTimeRange(event)))
-            addView(detailLine("LMS:", event.tagName.takeIf { it.isNotBlank() && it != "-" } ?: "Su kien"))
-        }.also { card ->
-            card.layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                bottomMargin = dp(12)
+            findViewById<TextView>(R.id.text_event_detail_time).text =
+                "Thoi gian: ${formatEventTimeRange(event)}"
+            findViewById<TextView>(R.id.text_event_detail_detail).apply {
+                text = "Chi tiet"
+                setOnClickListener {
+                    dialog.dismiss()
+                    findNavController().navigate(
+                        R.id.EventsFragment,
+                        Bundle().apply { putString("eventLocalId", event.localId) }
+                    )
+                }
             }
-        }
-    }
-
-    private fun detailLine(label: String, value: String): TextView {
-        return TextView(requireContext()).apply {
-            text = "$label $value"
-            setTextColor(Color.parseColor("#374151"))
-            textSize = 14f
-            setPadding(0, dp(6), 0, 0)
         }
     }
 

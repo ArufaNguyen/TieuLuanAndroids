@@ -101,7 +101,14 @@
         android:id="@+id/EventsFragment"
         android:name="com.example.tieuluanandroids.ui.events.EventsFragment"
         android:label="@string/events_fragment_label"
-        tools:layout="@layout/fragment_events" />
+        tools:layout="@layout/fragment_events">
+
+        <argument
+            android:name="eventLocalId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
 
     <fragment
         android:id="@+id/TagManagerFragment"
