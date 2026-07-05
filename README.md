@@ -338,3 +338,8 @@ Chạy test reverse API endpoint:
 
 ## Project link
  - https://github.com/ArufaNguyen/TieuLuanAndroids
+## Thành viên nhóm
+- Nguyễn Đức Anh
+- Nguyễn Quốc Thắng (Nhóm trưởng)
+- Phan Thế Hiển
+- Lê Duy Khánh
