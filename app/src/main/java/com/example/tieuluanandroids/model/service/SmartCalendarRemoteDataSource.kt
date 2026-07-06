@@ -111,13 +111,19 @@ class SmartCalendarRemoteDataSource(
             )
         }
 
-    suspend fun savePortalAuthorizationCredential(portalToken: String): ApiResult =
+    suspend fun savePortalCredential(
+        authorization: String?,
+        cookie: String?,
+        csrfToken: String?
+    ): ApiResult =
         withContext(ioDispatcher) {
             val credentials = sessionManager.getCredentials()
                 ?: return@withContext ApiResult(false, "Login is required")
-            SmartCalendarApiClient.savePortalAuthorizationCredential(
-                credentials.token,
-                portalToken
+            SmartCalendarApiClient.savePortalCredential(
+                sessionToken = credentials.token,
+                authorization = authorization,
+                cookie = cookie,
+                csrfToken = csrfToken
             )
         }
 

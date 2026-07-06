@@ -28,7 +28,16 @@ class RoomSessionManagerTest {
         manager.save("plain-session-token", session)
 
         assertEquals(session, manager.observeSession().first())
-        assertEquals(SessionCredentials("plain-session-token", 20), manager.getCredentials())
+        assertEquals(
+            SessionCredentials(
+                token = "plain-session-token",
+                accountId = 10,
+                userId = 20,
+                username = "tester",
+                loginName = "tester-login"
+            ),
+            manager.getCredentials()
+        )
 
         manager.clear()
         assertNull(manager.getCredentials())

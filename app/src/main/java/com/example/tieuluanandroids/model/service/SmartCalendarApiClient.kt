@@ -380,12 +380,25 @@ object SmartCalendarApiClient {
         }
     }
 
-    fun savePortalAuthorizationCredential(sessionToken: String, portalToken: String): ApiResult {
+    fun savePortalCredential(
+        sessionToken: String,
+        authorization: String?,
+        cookie: String?,
+        csrfToken: String?
+    ): ApiResult {
         return try {
-            val normalizedAuthorization = portalToken.trim()
-                .let { if (it.startsWith("Bearer ", ignoreCase = true)) it else "Bearer $it" }
+            val normalizedAuthorization = authorization
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { if (it.startsWith("Bearer ", ignoreCase = true)) it else "Bearer $it" }
             val captureId = startPortalCredentialCapture(sessionToken)
-            completePortalCredentialCapture(sessionToken, captureId, normalizedAuthorization)
+            completePortalCredentialCapture(
+                token = sessionToken,
+                captureId = captureId,
+                authorization = normalizedAuthorization,
+                cookie = cookie?.trim()?.takeIf { it.isNotBlank() },
+                csrfToken = csrfToken?.trim()?.takeIf { it.isNotBlank() }
+            )
         } catch (error: Exception) {
             ApiResult(false, error.message ?: "Cannot save portal credential")
         }
@@ -446,11 +459,15 @@ object SmartCalendarApiClient {
     private fun completePortalCredentialCapture(
         token: String,
         captureId: String,
-        authorization: String
+        authorization: String?,
+        cookie: String?,
+        csrfToken: String?
     ): ApiResult {
-        val payload = JSONObject()
-            .put("authorization", authorization)
-            .toString()
+        val payloadJson = JSONObject()
+        authorization?.let { payloadJson.put("authorization", it) }
+        cookie?.let { payloadJson.put("cookie", it) }
+        csrfToken?.let { payloadJson.put("csrfToken", it) }
+        val payload = payloadJson.toString()
         val request = authenticatedRequest(
             "${fetchBaseUrl()}/api/v1/portal-credentials/capture/$captureId/complete",
             token

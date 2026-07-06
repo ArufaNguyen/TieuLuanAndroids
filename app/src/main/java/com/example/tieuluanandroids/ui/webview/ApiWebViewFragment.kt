@@ -82,7 +82,8 @@ class ApiWebViewFragment : Fragment() {
             method: String,
             requestBody: String?,
             status: Int,
-            responseText: String
+            responseText: String,
+            authorizationHeader: String?
         ) {
             val prettyResponse = runCatching {
                 JSONObject(responseText).toString(2)
@@ -92,15 +93,21 @@ class ApiWebViewFragment : Fragment() {
             Log.d(TAG, "Login API request: ${requestBody.orEmpty()}")
             Log.d(TAG, "Login API status: $status")
             Log.d(TAG, "Login API response: $prettyResponse")
+            Log.d(TAG, "Login API authorization header captured: ${!authorizationHeader.isNullOrBlank()}")
 
-            val portalToken = extractPortalToken(responseText)
-            if (status in 200..299 && !portalToken.isNullOrBlank()) {
-                savePortalCredential(portalToken)
+            val authorization = extractPortalToken(responseText) ?: authorizationHeader
+            if (status !in 200..299) {
+                Log.w(TAG, "Skip portal credential save because login API failed with status=$status")
+            } else if (authorization.isNullOrBlank()) {
+                Log.w(TAG, "Skip portal credential save because Authorization was not captured")
+            } else {
+                savePortalCredential(authorization)
             }
 
             activity?.runOnUiThread {
+                val context = context ?: return@runOnUiThread
                 Toast.makeText(
-                    requireContext(),
+                    context,
                     "Login API status: $status",
                     Toast.LENGTH_LONG
                 ).show()
@@ -108,21 +115,32 @@ class ApiWebViewFragment : Fragment() {
         }
     }
 
-    private fun savePortalCredential(portalToken: String) {
-        val normalizedToken = portalToken.trim()
+    private fun savePortalCredential(authorization: String) {
+        val credentialKey = authorization.trim()
         synchronized(capturedPortalTokens) {
-            if (!capturedPortalTokens.add(normalizedToken)) return
+            if (!capturedPortalTokens.add(credentialKey)) {
+                Log.d(TAG, "Skip duplicated Authorization credential")
+                return
+            }
         }
 
         lifecycleScope.launch {
-            val result = app.data.savePortalAuthorizationCredential(normalizedToken)
+            val result = app.data.savePortalCredential(
+                authorization = authorization,
+                cookie = null,
+                csrfToken = null
+            )
             val message = if (result.success) {
                 "Portal credential saved"
             } else {
                 "Cannot save portal credential: ${result.message}"
             }
-            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
-            Log.d(TAG, message)
+            context?.let { Toast.makeText(it, message, Toast.LENGTH_LONG).show() }
+            if (result.success) {
+                Log.d(TAG, message)
+            } else {
+                Log.w(TAG, message)
+            }
         }
     }
 
@@ -177,6 +195,10 @@ class ApiWebViewFragment : Fragment() {
                 try { return JSON.stringify(body); } catch (e) { return String(body); }
             }
 
+            function safeHeader(headers, name) {
+                try { return headers && headers.get ? (headers.get(name) || '') : ''; } catch (e) { return ''; }
+            }
+
             const originalFetch = window.fetch;
             if (originalFetch) {
                 window.fetch = function(input, init) {
@@ -192,7 +214,8 @@ class ApiWebViewFragment : Fragment() {
                                     String(method),
                                     requestBody,
                                     response.status,
-                                    text
+                                    text,
+                                    safeHeader(response.headers, 'Authorization')
                                 );
                             }).catch(function(error) {
                                 PortalApiHook.onLoginApi(
@@ -200,7 +223,8 @@ class ApiWebViewFragment : Fragment() {
                                     String(method),
                                     requestBody,
                                     response.status,
-                                    'Cannot read response: ' + error
+                                    'Cannot read response: ' + error,
+                                    safeHeader(response.headers, 'Authorization')
                                 );
                             });
                         }
@@ -228,7 +252,8 @@ class ApiWebViewFragment : Fragment() {
                             String(xhr.__portalHookMethod || 'GET'),
                             requestBody,
                             xhr.status,
-                            xhr.responseText || ''
+                            xhr.responseText || '',
+                            xhr.getResponseHeader('Authorization') || ''
                         );
                     }
                 });

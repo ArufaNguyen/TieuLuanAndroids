@@ -120,8 +120,11 @@ class SmartCalendarData(
         return remoteDataSource.getDiscoveryJobs()
     }
 
-    suspend fun savePortalAuthorizationCredential(portalToken: String) =
-        remoteDataSource.savePortalAuthorizationCredential(portalToken)
+    suspend fun savePortalCredential(
+        authorization: String?,
+        cookie: String?,
+        csrfToken: String?
+    ) = remoteDataSource.savePortalCredential(authorization, cookie, csrfToken)
 
     suspend fun agentChatV2(message: String, confirmed: Boolean = false) =
         remoteDataSource.agentChatV2(message, confirmed)
